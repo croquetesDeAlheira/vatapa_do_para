@@ -5,4 +5,4 @@
 * @author Marcus Dias 44901
 */
 
-- Existem leaks no programa que não foram corrigidas corretamente
+- 
