@@ -1,4 +1,11 @@
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 #include "../include/table_skel.h"
+#include "../include/table_skel-private.h"
+#include "../include/message-private.h"
 #include "../include/table.h"
 #include "../include/data.h"
 #include "../include/entry.h"
@@ -9,7 +16,7 @@
 #define OK 0
 
 //espero que isto funcione 
-struct_t table_t *tabela;
+static struct table_t *tabela;
 
 /* Inicia o skeleton da tabela.
  * O main() do servidor deve chamar esta função antes de poder usar a
@@ -18,8 +25,8 @@ struct_t table_t *tabela;
  * Retorna 0 (OK) ou -1 (erro, por exemplo OUT OF MEMORY)
  */
 int table_skel_init(int n_lists){
-	tabela = table_create(n);
-	if(table == NULL){
+	tabela = table_create(n_lists);
+	if(tabela == NULL){
 		return ERROR;
 	}else{
 		return OK;
@@ -37,7 +44,7 @@ int table_skel_destroy(){
 /* Executa uma operação (indicada pelo opcode na msg_in) e retorna o
  * resultado numa mensagem de resposta ou NULL em caso de erro.
  */
-struct message_t *invoke(struct message_t *msg_in){
+struct message_t *invoke(struct message_t *msg_pedido){
 		//mensagem para devolver a resposta
 	struct message_t *msg_resposta = (struct message_t*)malloc(sizeof(struct message_t));
 	

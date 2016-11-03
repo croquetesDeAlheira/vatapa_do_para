@@ -19,7 +19,7 @@ OBJFILES_MESSAGE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $
 OBJFILES_CLIENT = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/message.o $(OBJ)/network_client.o $(OBJ)/table-client.o 
 OBJFILES_SERVER = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/table.o $(OBJ)/table-server.o $(OBJ)/table_skel.o
 
-all: test_table test_message table-server table-client
+all: table-server table-client
 
 table-client: $(OBJFILES_CLIENT)
 	gcc -o table-client $(OBJFILES_CLIENT)
