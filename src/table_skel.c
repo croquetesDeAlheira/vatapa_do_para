@@ -16,7 +16,7 @@
 #define OK 0
 
 //espero que isto funcione 
-static struct table_t *tabela;
+struct table_t *tabela;
 
 /* Inicia o skeleton da tabela.
  * O main() do servidor deve chamar esta função antes de poder usar a
