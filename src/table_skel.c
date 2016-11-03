@@ -1,7 +1,7 @@
 #include "../include/table_skel.h"
-#include "table.h"
-#include "data.h"
-#include "entry.h"
+#include "../include/table.h"
+#include "../include/data.h"
+#include "../include/entry.h"
 
 
 

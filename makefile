@@ -17,7 +17,7 @@ OBJFILES_LIST = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_list.o
 OBJFILES_TABLE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/test_table.o 
 OBJFILES_MESSAGE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/test_message.o
 OBJFILES_CLIENT = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/message.o $(OBJ)/network_client.o $(OBJ)/table-client.o 
-OBJFILES_SERVER = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/table.o $(OBJ)/table-server.o
+OBJFILES_SERVER = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/table.o $(OBJ)/table-server.o $(OBJ)/table_skel.o
 
 all: test_table test_message table-server table-client
 
@@ -52,6 +52,8 @@ $(OBJ)/network_client.o: $(SRC)/network_client.c $(INC)/network_client-private.h
 $(OBJ)/table-server.o: $(SRC)/table-server.c $(INC)/inet.h $(INC)/table-private.h $(INC)/message-private.h
 	gcc -c $(SRC)/table-server.c -o $(OBJ)/table-server.o
 
+$(OBJ)/table_skel.o: $(SRC)/table_skel.c $(INC)/table_skel.h
+	gcc -c $(SRC)/table_skel.c -o $(OBJ)/table_skel.o
 
 # Ficheiros .o de teste da Fase 2 1a parte
 $(OBJ)/test_message.o: test_message.c $(INC)/list-private.h $(INC)/message-private.h 
