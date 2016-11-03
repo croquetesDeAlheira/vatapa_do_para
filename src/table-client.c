@@ -62,22 +62,35 @@ int keyfromstring(char *key) {
 // Devolve um apontador de apontadores
 // contendo o resto dos tokens
 char ** getTokens (char* token) {
-	char **tokens;
-	int i;
+	char **tokens, **result;
+	char *p;
+	int i, size;
 
-	// Calloc inicializa a NULL os nao atribuidos
-	tokens = (char**)calloc(3, sizeof(char*));
+	tokens = (char**)malloc(3 * sizeof(char*));
 	if (tokens == NULL) { return NULL; }
 	// Le o próximo token
 	token = strtok(NULL, space);
 	
+	size = 0;
 	i = 0;
 	while (token != NULL) {
 		tokens[i] = strdup(token);
 		token = strtok(NULL, space);
 		i++;
+		size++;
 	}
-	return tokens;
+
+	result = (char**)malloc((size + 1) * sizeof(char*));
+	
+	for(i = 0; i < size; i++) {
+		result[i] = strdup(tokens[i]);
+		free(tokens[i]);
+	}
+
+	free(tokens);
+	result[size] = NULL;
+
+	return result;
 }
 
 // Função que imprime uma mensagem 
@@ -216,6 +229,7 @@ int main(int argc, char **argv){
 					msg_out->c_type = CT_ENTRY;
 					msg_out->content.entry = 
 						entry_create(arguments[0], data);
+
 					// Libertar memória
 					data_destroy(data);
 					break;
@@ -226,7 +240,7 @@ int main(int argc, char **argv){
 					msg_out->opcode = OC_GET;
 					msg_out->c_type = CT_KEY;
 					// Verifica o tipo de comando
-					msg_out->content.key = arguments[0];
+					msg_out->content.key = strdup(arguments[0]);
 					break;
 
 				case UPDATE :
@@ -273,10 +287,11 @@ int main(int argc, char **argv){
 				// Liberta memoria dos argumentos e da memoria
 				
 				/*ISSO AQUI EM BAIXO TA A DAR ALGUM ERRO...TEMOS DE VER DEPOIS COMO FAZEMOS ESSES FREES */
+				if (sigla != SIZE)
+					list_free_keys(arguments);
 				free_message(msg_out);
 				free_message(msg_resposta);
-				//arguments[2] = NULL;			
-				//table_free_keys(arguments);	
+					
 			}
 			
 		}
