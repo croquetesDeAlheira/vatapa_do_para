@@ -30,6 +30,15 @@
 #define SIZE 5
 #define QUIT 6
 
+// Códigos de msgs de erros
+#define SEM_ARG 70
+#define PUT_NO_ARGS 71
+#define NO_COMMAND 72
+#define GET_NO_ARG 73
+#define ERROR_SYS 74
+#define UPDATE_NO_ARGS 75
+#define DEL_NO_ARG 76
+
 const char space[2] = " ";
 const char all_keys[2] = "!";
 
@@ -131,6 +140,56 @@ void print_msg(struct message_t *msg,const char* title) {
 	printf("-------------------\n");
 }
 
+void printErrors(int code) {
+	switch (code) {
+		case SEM_ARG :
+			printf("Comando nao conhecido, por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			printf("Exemplo de uso: del <key>\n");
+			printf("Exemplo de uso: size\n");
+			printf("Exemplo de uso: quit\n");
+		break;
+
+		case PUT_NO_ARGS:
+			printf("Comando put sem argumentos, por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			break;
+
+		case NO_COMMAND :
+			printf("Erro ao introduzir comando. Por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			printf("Exemplo de uso: del <key>\n");
+			printf("Exemplo de uso: size\n");
+			printf("Exemplo de uso: quit\n");
+			break;
+
+		case GET_NO_ARG :
+			printf("Comando get sem argumento. Por favor, tente de novo\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			break;
+
+		case ERROR_SYS :
+			printf("Erro de sistema. Por favor tente de novo\n");
+			break;
+
+		case UPDATE_NO_ARGS :
+			printf("Comando update sem argumentos. Por favor tente de novo\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			break;
+
+		case DEL_NO_ARG :
+			printf("Comando del sem argumento. Por favor tente de novo\n");
+			printf("Exemplo de uso: del <key>\n");
+	}
+}
+
 
 /************************************************************
  *                    Main Function                         *
@@ -180,7 +239,7 @@ int main(int argc, char **argv){
 		token = strtok(input, space);
 		//Confirma se tem comando
 		if (token == NULL) {
-			// Possivel mensagem de erro
+			printErrors(NO_COMMAND);
 			continue;
 		}
 
@@ -196,14 +255,8 @@ int main(int argc, char **argv){
 		switch(sigla) {
 			
 			case BADKEY :					
-				// Commando inválido
-				printf("Comando nao conhecido, por favor tente de novo\n");
-				printf("Exemplo de uso: put <key> <data>\n");
-				printf("Exemplo de uso: get <key>\n");
-				printf("Exemplo de uso: get !\n");
-				printf("Exemplo de uso: del <key>\n");
-				printf("Exemplo de uso: size\n");
-				printf("Exemplo de uso: quit\n");
+				// Comando inválido ok
+				printErrors(NO_COMMAND);
 				break;
 
 			
@@ -211,7 +264,8 @@ int main(int argc, char **argv){
 				// Verifica possiveis erros
 				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(PUT_NO_ARGS);
+					continue;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -219,8 +273,9 @@ int main(int argc, char **argv){
 				data = data_create2(size, arguments[1]);
 				// Verifica data
 				if (data == NULL) {
-					// Possivel mensagem de erro
-					break;
+					// Possivel mensagem de erro ok
+					printErrors(ERROR_SYS);
+					continue;
 				}
 				key = arguments[0];
 				// Faz o pedido PUT
@@ -237,8 +292,9 @@ int main(int argc, char **argv){
 			case GET :
 				// Argumento do get
 				if (arguments == NULL || arguments[0] == NULL) {
-					// Possivel mensagem de erro
-					break;
+					// Possivel mensagem de erro ok
+					printErrors(NO_COMMAND);
+					continue;
 				}
 				// Faz o pedido GET key ou GET all_keys
 				if (strcmp(arguments[0], all_keys) == 0) {
@@ -262,7 +318,8 @@ int main(int argc, char **argv){
 			case UPDATE :
 				if (arguments == NULL ||arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(UPDATE_NO_ARGS);
+					continue;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -271,7 +328,8 @@ int main(int argc, char **argv){
 				// Verifica data
 				if (data == NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(ERROR_SYS);
+					continue;
 				}
 				// Faz o pedido UPDATE
 				result = rtable_update(table, arguments[0], data);
@@ -287,7 +345,8 @@ int main(int argc, char **argv){
 				// Verifica argumentos
 				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(DEL_NO_ARG);
+					continue;
 				}
 				// Faz o pedido DEL
 				result = rtable_del(table, arguments[0]);
@@ -305,7 +364,8 @@ int main(int argc, char **argv){
 				// Significa que escreveu size qualquer_coisa_mais
 				if (arguments != NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(NO_COMMAND);
+					continue;
 				}
 				// Faz pedido de SIZE
 				result = rtable_size(table);
@@ -321,7 +381,8 @@ int main(int argc, char **argv){
 				// Exemplo: quit qualquer_coisa_mais
 				if (arguments != NULL) {
 					// Possivel mensagem de erro
-					break;
+					printErrors(NO_COMMAND);
+					continue;
 				}
 				// Informa client_stub que cliente deseja sair
 				result = rtable_undind(table);
@@ -330,9 +391,13 @@ int main(int argc, char **argv){
 				break;
 			}
 			// Fim do switch
-			
+			// Envia a mensagem a ser imprimida
+			if (sigla != QUIT)
+				print_msg(msg);
+			free_message(msg);
 			// Liberta argumentos
 			list_free_keys(arguments);
 	}
-		// Fim do ciclo...
+	// Fim do ciclo...
+	return OK;
 }
