@@ -143,6 +143,7 @@ int main(int argc, char **argv){
 	char *command, *token;
 	char **arguments, **keys, *key;
 	struct data_t *data;
+	struct message_t *msg;
 
 	//const char quit[5] = "quit";
 	const char ip_port_seperator[2] = ":";
@@ -187,6 +188,9 @@ int main(int argc, char **argv){
 		sigla = keyfromstring(token);
 		// Determina argumentos caso existam
 		arguments = getTokens(token);
+		// Cria a mensagem a encapsular os resultados
+		// obtidos do servidor
+		msg = (struct message_t)malloc(sizeof(struct message_t));
 
 		// Faz o switch dos comandos
 		switch(sigla) {
@@ -207,8 +211,7 @@ int main(int argc, char **argv){
 				// Verifica possiveis erros
 				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -217,15 +220,17 @@ int main(int argc, char **argv){
 				// Verifica data
 				if (data == NULL) {
 					// Possivel mensagem de erro
-					// Liberta memória
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				key = arguments[0];
 				// Faz o pedido PUT
 				result = rtable_put(table, key, value);
 				// Libertar memória
 				data_destroy(data);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_PUT + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
 				break;
 
 			
@@ -233,16 +238,23 @@ int main(int argc, char **argv){
 				// Argumento do get
 				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Faz o pedido GET key ou GET all_keys
 				if (strcmp(arguments[0], all_keys) == 0) {
 					keys = rtable_get_keys(table);
+					// Cria a mensagem a imprimir
+					msg->opcode = OC_GET + 1;
+					msg->c_type = CT_KEYS;
+					msg->content.keys = keys;
 				}
 				else {
 					key = arguments[0];
 					data = rtable_get(table, key);
+					// Cria a mensagem a imprimir
+					msg->opcode = OC_GET + 1;
+					msg->c_type = CT_VALUE;
+					msg->content.data = data;
 				}
 				break;
 
@@ -250,8 +262,7 @@ int main(int argc, char **argv){
 			case UPDATE :
 				if (arguments == NULL ||arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -260,12 +271,14 @@ int main(int argc, char **argv){
 				// Verifica data
 				if (data == NULL) {
 					// Possivel mensagem de erro
-					// Liberta memória
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Faz o pedido UPDATE
 				result = rtable_update(table, arguments[0], data);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_UPDATE + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
 				data_destroy(data);
 				break;
 
@@ -274,11 +287,14 @@ int main(int argc, char **argv){
 				// Verifica argumentos
 				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Faz o pedido DEL
 				result = rtable_del(table, arguments[0]);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_DEL + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
 				break;
 
 				
@@ -289,11 +305,14 @@ int main(int argc, char **argv){
 				// Significa que escreveu size qualquer_coisa_mais
 				if (arguments != NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Faz pedido de SIZE
 				result = rtable_size(table);
+				// Cria mensagem e imprimir
+				msg->opcode = OC_SIZE + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
 				break;
 
 			case QUIT :
@@ -302,8 +321,7 @@ int main(int argc, char **argv){
 				// Exemplo: quit qualquer_coisa_mais
 				if (arguments != NULL) {
 					// Possivel mensagem de erro
-					list_free_keys(arguments);
-					continue;
+					break;
 				}
 				// Informa client_stub que cliente deseja sair
 				result = rtable_undind(table);
@@ -312,6 +330,7 @@ int main(int argc, char **argv){
 				break;
 			}
 			// Fim do switch
+			
 			// Liberta argumentos
 			list_free_keys(arguments);
 	}
