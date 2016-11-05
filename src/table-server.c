@@ -1,4 +1,4 @@
-/*
+	/*
 *		Grupo 12
 * @author Daniel Santos 44887
 * @author Luis Barros  47082
@@ -22,18 +22,29 @@
 
 #define ERROR -1
 #define OK 0
-#define NFDESC 4 // Número de sockets (uma para listening)
-#define TIMEOUT 50 // em milisegundos
+#define TRUE 0
+#define FALSE -1
+#define NCLIENTS 4 // Número de sockets (uma para listening)
+#define TIMEOUT 1000 // em milisegundos
 
 /* Função para preparar uma socket de receção de pedidos de ligação.
 */
 int make_server_socket(short port){
   int socket_fd;
+  int rc, on = 1;
   struct sockaddr_in server;
 
   if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
     perror("Erro ao criar socket");
     return -1;
+  }
+
+  //make it reusable
+  rc = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+  if(rc < 0 ){
+  	perror("erro no setsockopt");
+  	close(socket_fd);
+  	return ERROR;
   }
 
   server.sin_family = AF_INET;
@@ -46,6 +57,7 @@ int make_server_socket(short port){
       return -1;
   }
 
+  //o segundo argumento talvez nao deva ser 0, para poder aceitar varios FD's
   if (listen(socket_fd, 0) < 0){
       perror("Erro ao executar listen");
       close(socket_fd);
@@ -160,27 +172,140 @@ int network_receive_send(int sockfd){
 
 
 int main(int argc, char **argv){
-	/*
-	int listening_socket, connsock, result;
+	
+	int listening_socket;
+	int connsock;
+	int result;
 	int client_on = 1;
+	struct pollfd socketsPoll[NCLIENTS];
 	struct sockaddr_in client;
 	socklen_t size_client;
-	struct table_t *table;
-
+	
 	// Nota: 3 argumentos. O nome do programa conta!
 	if (argc != 3){
-	printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
-	printf("Exemplo de uso: ./table-server 54321 10\n");
-	return -1;
-	}
-
-	if ((listening_socket = make_server_socket(atoi(argv[1]))) < 0) return -1;
-
-	if (table_skel_init(atoi(argv[2])) == ERROR){
-		result = close(listening_socket);
+		printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
+		printf("Exemplo de uso: ./table-server 54321 10\n");
 		return -1;
 	}
-	
+
+	//Codigo de acordo com as normas da IBM
+	/*make a reusable listening socket*/
+	listening_socket = make_server_socket(atoi(argv[1]));
+	//check if done right
+	if(listening_socket < 0){return -1;}
+
+	/* initialize table */
+	if(table_skel_init(atoi(argv[2])) == ERROR){ 
+		close(listening_socket); 
+		return ERROR;
+	}
+
+
+
+	//inicializa todos os clientes com 0
+	memset(socketsPoll, 0 , sizeof(socketsPoll));
+	//o primeiro elem deve ser o listening
+	socketsPoll[0].fd = listening_socket;
+	socketsPoll[0].events = POLLIN;
+
+	/* ciclo para receber os clients conectados */
+	int checkPoll;
+	int numFDs = 1;
+	int activeFDs = 0;
+	int close_conn;
+	int compress_list;
+	int i;
+	printf("waiting clients...\n");
+	//call poll and check
+	while(1){ //while no cntrl c
+	while((checkPoll = poll(socketsPoll, numFDs, 0)) >= 0){
+
+		//verifica se nao houve evento em nenhum socket
+		if(checkPoll == 0){
+			perror("timeout expired on poll()");
+			continue;
+		}
+
+		/* então existe pelo menos 1 poll active, QUAL???? loops ;) */
+		for(i = 0; i < numFDs; i++){
+			//procura...0 nao houve return events
+			if(socketsPoll[i].revents == 0){continue;}
+
+			//se houve temos de ver se foi POLLIN
+			if(socketsPoll[i].revents != POLLIN){
+     		   printf("  Error! revents = %d\n", socketsPoll[i].revents);
+       		   break;
+     		}
+
+
+     		//se for POLLIN pode ser no listening_socket ou noutro qualquer...
+     		if(socketsPoll[i].fd == listening_socket){
+     			printf("listening pollin\n");
+     			//quer dizer que temos de aceitar todas as ligações com a nossa socket listening
+     				connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
+     				printf("connsock %d\n", connsock);
+     				if (connsock < 0){
+           				if (errno != EWOULDBLOCK){
+              				perror("  accept() failed");
+           			 	}
+           			 	break;
+          			}
+          			socketsPoll[numFDs].fd = connsock;
+          			socketsPoll[numFDs].events = POLLIN;
+          			numFDs++;
+     			
+     		//fim do if do listening
+     		}else{/* não é o listening....então deve ser outro...*/
+     			printf("connection pollin\n");
+     			close_conn = FALSE;
+     			while(TRUE){
+     				//receive data
+     				if(network_receive_send(socketsPoll[i].fd) < 0){ 
+     					//ou mal recebida ou o cliente desconectou
+     					// -> close connection
+     					printf("ocorreu um error\n");
+     					close_conn = TRUE;
+     					break;
+
+     				}
+     			}//fim da ligacao cliente-servidor
+     			compress_list == FALSE;
+
+     			if(close_conn){
+     				close(socketsPoll[i].fd);
+          			socketsPoll[i].fd = -1;
+          			compress_list = TRUE;
+     			}
+     		}//fim do else
+		}//fim do for numFDs
+	}//fim do for polls
+
+
+		//se a lista tiver fragmentada, devemos comprimir 
+		int j;
+		if (compress_list){
+    	  compress_list = FALSE;
+    	  for (i = 0; i < numFDs; i++){
+    	    if (socketsPoll[i].fd == -1){
+    	      for(j = i; j < numFDs; j++){
+    	        socketsPoll[j].fd = socketsPoll[j+1].fd;
+    	      }
+    	      numFDs--;
+    	    }
+    	  }
+    	}
+
+    }
+    //close dos sockets
+    for (i = 0; i < numFDs; i++){
+    	if(socketsPoll[i].fd >= 0){
+     		close(socketsPoll[i].fd);
+     	}
+ 	}
+}
+
+
+	/*
 	while(1){
 		printf("waiting client\n");
 		connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
@@ -202,71 +327,3 @@ int main(int argc, char **argv){
 		close(connsock);
 	}
 	*/
-
-	struct pollfd connections[NFDESC]; // Estrutura para file descriptors das sockets das ligações
- 	int sockfd; // file descriptor para a welcoming socket
- 	struct sockaddr_in server, client; // estruturas para os dados dos endereços de servidor e cliente
- 	char str[MAX_MSG + 1];
- 	int nbytes, count, nfds, kfds, i;
- 	socklen_t size_client;
-
-
- 	// Nota: 3 argumentos. O nome do programa conta!
-	if (argc != 3){
-		printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
-		printf("Exemplo de uso: ./table-server 54321 10\n");
-		return -1;
-	}
-
- 	sockfd = make_server_socket(atoi(argv[1]));
- 	if(table_skel_init(atoi(argv[2])) == ERROR){
-		close(sockfd);
-		return -1;
-	}
-	
- 	printf("Servidor à espera de dados\n");
- 	size_client = sizeof(struct sockaddr);
-
-  	for (i = 0; i < NFDESC; i++){
-  		connections[i].fd = -1;    // poll ignora estruturas com fd < 0
-  	}
-
-	connections[0].fd = sockfd;  // Vamos detetar eventos na welcoming socket
-  	connections[0].events = POLLIN;  // Vamos esperar ligações nesta socket
-
-  	nfds = 1; // número de file descriptors
-  	int client_on = 1;
-  	// Retorna assim que exista um evento ou que TIMEOUT expire. * FUNÇÂO POLL *.
-  	while ((kfds = poll(connections, nfds, 10)) >= 0){ // kfds == 0 significa timeout sem eventos
-    
-   		 if (kfds > 0){ // kfds é o número de descritores com evento ou erro
-
-      		if ((connections[0].revents & POLLIN) && (nfds < NFDESC)){  // Pedido na listening socket ?
-        		if ((connections[nfds].fd = accept(connections[0].fd, (struct sockaddr *) &client, &size_client)) > 0){ // Ligação feita ?
-         			connections[nfds].events = POLLIN; // Vamos esperar dados nesta socket
-          			nfds++;
-      			}
-      		}
-      		for (i = 1; i < nfds; i++){ // Todas as ligações
-
-        		if (connections[i].revents & POLLIN) { // Dados para ler ?
-        			//sim
-        			printf(" * Client is connected!\n");
-					while (client_on){
-						/* Fazer ciclo de pedido e resposta */
-						if(network_receive_send(connections[0].fd) < 0){
-							printf("maybe Enviar opcode erro\n");
-        					client_on = 0;
-						}else{
-							printf("cliente received everything\n");
-						}
-					}
-				}
-
-			}
-			printf("client offline\n");
-			close(connections[0].fd);
-        }
-    }
-
-}
