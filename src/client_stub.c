@@ -9,15 +9,34 @@
 #include <errno.h>
 
 #include "../include/client_stub-private.h"
-
- 
+#include "../include/codes.h"
 
 /* Função para estabelecer uma associação entre o cliente e uma tabela
  * remota num servidor.
  * address_port é uma string no formato <hostname>:<port>.
  * retorna NULL em caso de erro .
  */
-struct rtable_t *rtable_bind(const char *address_port);
+struct rtable_t *rtable_bind(const char *address_port){
+
+	if(address_port == NULL){
+		perror("Problema com o address_port\n");
+		return NULL;
+	}
+
+	struct rtable_t *rtable = (struct rtable_t)malloc(sizeof(struct rtable_t));
+	if(rtable == NULL){
+		perror("Problema na criação da tabela remota\n");
+		return NULL;
+	}	
+	
+	rtable->server = network_connect(address_port);
+	if(rtable->server == NULL){
+		perror("Problema na conecção\n");
+		return NULL;
+	}
+
+	return rtable;	
+}
 
 /* Termina a associação entre o cliente e a tabela remota, e liberta
  * toda a memória local. 
