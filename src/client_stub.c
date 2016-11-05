@@ -136,9 +136,10 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	printf("get2\n");
 	// Mensagem a enviar
 	msg_pedido->opcode = OC_GET;
-	msg_pedido->c_type = CT_VALUE;
+	msg_pedido->c_type = CT_KEY;
 	printf("key %s\n", key);
 	msg_pedido->content.key = key;
+	printf("content key %s\n", msg_pedido->content.key);
 	// Receber a mensagem de resposta
 	printf("get2.1\n");
 	msg_resposta = network_send_receive(table->server, msg_pedido);
@@ -226,25 +227,33 @@ char **rtable_get_keys(struct rtable_t *rtable){
 		perror("Problema com rtable\n");
 		return NULL;
 	}
+	printf("get1\n");
 	// Criação e alocação da mensagem de pedido
 	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return NULL;
 	}
+	printf("get2\n");
 	// Mensagem a enviar
 	msg_pedido->opcode = OC_GET;
-	msg_pedido->c_type = CT_KEYS;
+	msg_pedido->c_type = CT_KEY;
 	// Servidor vai verificar se content.key == !
 	msg_pedido->content.key = all;
 	// Receber a mensagem de resposta
+	printf("get3\n");
 	msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
 		perror("Problema com a mensagem de resposta\n");
 		return NULL;
 	} 
+	printf("get4\n");
 	// Mensagem de pedido já não é necessária
-	free_message(msg_pedido);
+	/////////////////////////////////////
+	// Este free message dá problemas... Tentar perceber porquê
+	/////////////////////////////////////
+	//free_message(msg_pedido);
+	printf("get5\n");
 	return msg_resposta->content.keys;	
 }
 
