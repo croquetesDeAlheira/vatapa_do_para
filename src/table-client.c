@@ -20,16 +20,11 @@
 
 #include "../include/network_client-private.h"
 #include "../include/message-private.h"
-
-// Definindo os tipos de comandos
-#define BADKEY -1
-#define PUT 1
-#define GET 2
-#define UPDATE 3
-#define DEL 4
-#define SIZE 5
+#include "../include/client_stub-private.h"
+#include "../include/codes.h"
 
 const char space[2] = " ";
+const char all_keys[2] = "!";
 
 // Estrutura para poder associar os comandos
 // aos comandos
@@ -38,7 +33,8 @@ static struct commands_t lookUpTabble[] = {
 	{"get", GET}, 
 	{"update", UPDATE}, 
 	{"del", DEL}, 
-	{"size", SIZE} 
+	{"size", SIZE},
+	{"quit", QUIT}
 };
 
 // Numero de comandos definidos de maneira automatica
@@ -93,6 +89,7 @@ char ** getTokens (char* token) {
 	return result;
 }
 
+// Talvez tenha de sr definido
 // Função que imprime uma mensagem 
 void print_msg(struct message_t *msg,const char* title) {
 	int i;
@@ -108,7 +105,6 @@ void print_msg(struct message_t *msg,const char* title) {
 			printf("key: %s\n", msg->content.key);
 		}break;
 		case CT_KEYS:{
-				//for(i = 0; msg->content.keys[i] != NULL; i++) {
 				int i = 0;
 				while(msg->content.keys[i] != NULL){
 					printf("key[%d]: %s\n", i, msg->content.keys[i]);
@@ -127,8 +123,55 @@ void print_msg(struct message_t *msg,const char* title) {
 	printf("-------------------\n");
 }
 
+void printErrors(int code) {
+	switch (code) {
+		case SEM_ARG :
+			printf("Comando nao conhecido, por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			printf("Exemplo de uso: del <key>\n");
+			printf("Exemplo de uso: size\n");
+			printf("Exemplo de uso: quit\n");
+		break;
 
+		case PUT_NO_ARGS:
+			printf("Comando put sem argumentos, por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			break;
 
+		case NO_COMMAND :
+			printf("Erro ao introduzir comando. Por favor tente de novo\n");
+			printf("Exemplo de uso: put <key> <data>\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			printf("Exemplo de uso: del <key>\n");
+			printf("Exemplo de uso: size\n");
+			printf("Exemplo de uso: quit\n");
+			break;
+
+		case GET_NO_ARG :
+			printf("Comando get sem argumento. Por favor, tente de novo\n");
+			printf("Exemplo de uso: get <key>\n");
+			printf("Exemplo de uso: get !\n");
+			break;
+
+		case ERROR_SYS :
+			printf("Erro de sistema. Por favor tente de novo\n");
+			break;
+
+		case UPDATE_NO_ARGS :
+			printf("Comando update sem argumentos. Por favor tente de novo\n");
+			printf("Exemplo de uso: update <key> <value>\n");
+			break;
+
+		case DEL_NO_ARG :
+			printf("Comando del sem argumento. Por favor tente de novo\n");
+			printf("Exemplo de uso: del <key>\n");
+	}
+}
 
 
 /************************************************************
@@ -136,15 +179,15 @@ void print_msg(struct message_t *msg,const char* title) {
  ************************************************************/
 int main(int argc, char **argv){
 
-	struct server_t *server;
+	struct rtable_t table;
 	char input[81];
-	struct message_t *msg_out, *msg_resposta, *msg_size;
-	int i, stop, sigla, m_size, size;
+	int stop, sigla, result;
 	char *command, *token;
-	char **arguments, **dataToNetwork;
+	char **arguments, **keys, *key;
 	struct data_t *data;
+	struct message_t *msg;
 
-	const char quit[5] = "quit";
+	//const char quit[5] = "quit";
 	const char ip_port_seperator[2] = ":";
 	const char get_all_keys[2] = "!";
 	const char msg_title_out[31] = "Mensagem enviada para servidor";
@@ -155,146 +198,195 @@ int main(int argc, char **argv){
 	if (argc != 2 || argv == NULL || argv[1] == NULL) { 
 		printf("Erro de argumentos.\n");
 		printf("Exemplo de uso: /table_client 10.101.148.144:54321\n");
-		return -1; 
+		return ERROR; 
 	}
 
-	/* Usar network_connect para estabelecer ligação ao servidor */
+	/* Usar r_table_bind para ligar-se a uma tablea remota */
 	// Passa ip:porto
-	server = network_connect(argv[1]);
-	if(server == NULL){exit(0);}
+	table = r_table_bind(argv[1]);
+
 	/* Fazer ciclo até que o utilizador resolva fazer "quit" */
 	stop = 0;
- 	while (stop == 0){ 
+ 	while (stop == 0) { 
 
 		printf(">>> "); // Mostrar a prompt para receber comando
 
-		/* Receber o comando introduzido pelo utilizador
-		   Sugestão: usar fgets de stdio.h
-		   Quando pressionamos enter para finalizar a entrada no
-		   comando fgets, o carater \n é incluido antes do \0.
-		   Convém retirar o \n substituindo-o por \0.
-		k*/
+		// Recebe o comando por parte utilizador
 		fgets(input,80,stdin);
-
 		// Retirar o caracter \n
 		command = input;
 		while (*command != '\n') { command++; }
 		// Actualiza
 		*command = '\0';
-
-
-		/* Verificar se o comando foi "quit". Em caso afirmativo
-		   não há mais nada a fazer a não ser terminar decentemente.
-		 */
-		// Luis: Ler o primeiro token para avaliar
+		// Faz o token e verifica a opção
 		token = strtok(input, space);
-
-		// Leu quit sai do ciclo while
-		if (strcmp(quit,token) == 0) { 
-			stop = 1; 
-		} else {
-			/* Caso contrário:
-			Preparar msg_out;
-			Usar network_send_receive para enviar msg_out para
-			o server e receber msg_resposta.
-			*/
-
-			// Sigla do comando para poder correr o switch
-			sigla = keyfromstring(token);
-			// Inicializa a mensagem
-			msg_out = (struct message_t*)malloc(sizeof(struct message_t));
-			if (msg_out == NULL) { break; } // Salta o ciclo
-
-			switch(sigla) {
-				case BADKEY :
-					// Algo como
-					printf("Comando nao conhecido, por favor tente de novo\n");
-					printf("Exemplo de uso: put <key> <data>\n");
-					printf("Exemplo de uso: get <key>\n");
-					printf("Exemplo de uso: get !\n");
-					printf("Exemplo de uso: del <key>\n");
-					printf("Exemplo de uso: size\n");
-					printf("Exemplo de uso: quit\n");
-					break;
-
-				case PUT :
-					// argumentos do put
-					arguments = getTokens(token);
-					size = strlen(arguments[1]) + 1;
-					// Criar o data 
-					data = data_create2(size, arguments[1]);
-					//Criar o entry
-					// Atributos de msg
-					msg_out->opcode = OC_PUT;
-					msg_out->c_type = CT_ENTRY;
-					msg_out->content.entry = 
-						entry_create(arguments[0], data);
-
-					// Libertar memória
-					data_destroy(data);
-					break;
-
-				case GET :
-					arguments = getTokens(token);
-					// Atributos de msg
-					msg_out->opcode = OC_GET;
-					msg_out->c_type = CT_KEY;
-					// Verifica o tipo de comando
-					msg_out->content.key = strdup(arguments[0]);
-					break;
-
-				case UPDATE :
-					// argumentos do put
-					arguments = getTokens(token);
-					size = strlen(arguments[1]) + 1;
-					// Criar o data 
-					data = data_create2(size, arguments[1]);
-					// Atributos de msg
-					msg_out->opcode = OC_UPDATE;
-					msg_out->c_type = CT_ENTRY;
-					msg_out->content.entry = 
-						entry_create(arguments[0], data);
-					// Libertar memória
-					data_destroy(data);
-					break;
-
-				case DEL : 
-					arguments = getTokens(token);		
-					msg_out->opcode = OC_DEL;
-					msg_out->c_type = CT_KEY;
-					msg_out->content.key = strdup(arguments[0]);
-					break;
-
-				case SIZE :	
-					msg_out->opcode = OC_SIZE;
-					msg_out->c_type = CT_RESULT; 
-					break;
-			}
-
-			// Mensagens carregadas
-			// Trata de enviar e receber 
-			// Faz os prints necessários
-			if (sigla != BADKEY) {
-				
-			
-				// Envia a msg com o pedido e aguarda resposta
-				//prt("aqui");
-				print_msg(msg_out, msg_title_out);
-				msg_resposta = network_send_receive(server, msg_out);
-				// Imprime msg a enviar
-				// Imprime a msg recebida
-				print_msg(msg_resposta, msg_title_in);
-				// Liberta memoria dos argumentos e da memoria
-				
-				/*ISSO AQUI EM BAIXO TA A DAR ALGUM ERRO...TEMOS DE VER DEPOIS COMO FAZEMOS ESSES FREES */
-				if (sigla != SIZE)
-					list_free_keys(arguments);
-				free_message(msg_out);
-				free_message(msg_resposta);
-					
-			}
-			
+		//Confirma se tem comando
+		if (token == NULL) {
+			printErrors(NO_COMMAND);
+			continue;
 		}
+
+		// Sigla do comando para poder correr o switch
+		sigla = keyfromstring(token);
+		// Determina argumentos caso existam
+		arguments = getTokens(token);
+		// Cria a mensagem a encapsular os resultados
+		// obtidos do servidor
+		msg = (struct message_t *)malloc(sizeof(struct message_t *));
+
+		// Faz o switch dos comandos
+		switch(sigla) {
+			
+			case BADKEY :					
+				// Comando inválido ok
+				printErrors(NO_COMMAND);
+				break;
+
+			
+			case PUT :
+				// Verifica possiveis erros
+				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
+					// Possivel mensagem de erro
+					printErrors(PUT_NO_ARGS);
+					continue;
+				}
+				// Tamanho do data
+				size = strlen(arguments[1]) + 1;
+				// Criar o data 
+				data = data_create2(size, arguments[1]);
+				// Verifica data
+				if (data == NULL) {
+					// Possivel mensagem de erro ok
+					printErrors(ERROR_SYS);
+					continue;
+				}
+				key = arguments[0];
+				// Faz o pedido PUT
+				result = rtable_put(table, key, value);
+				// Libertar memória
+				data_destroy(data);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_PUT + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
+				break;
+
+			
+			case GET :
+				// Argumento do get
+				if (arguments == NULL || arguments[0] == NULL) {
+					// Possivel mensagem de erro ok
+					printErrors(NO_COMMAND);
+					continue;
+				}
+				// Faz o pedido GET key ou GET all_keys
+				if (strcmp(arguments[0], all_keys) == 0) {
+					keys = rtable_get_keys(table);
+					// Cria a mensagem a imprimir
+					msg->opcode = OC_GET + 1;
+					msg->c_type = CT_KEYS;
+					msg->content.keys = keys;
+				}
+				else {
+					key = arguments[0];
+					data = rtable_get(table, key);
+					// Cria a mensagem a imprimir
+					msg->opcode = OC_GET + 1;
+					msg->c_type = CT_VALUE;
+					msg->content.data = data;
+				}
+				break;
+
+			
+			case UPDATE :
+				if (arguments == NULL ||arguments[0] == NULL || arguments[1] == NULL) {
+					// Possivel mensagem de erro
+					printErrors(UPDATE_NO_ARGS);
+					continue;
+				}
+				// Tamanho do data
+				size = strlen(arguments[1]) + 1;
+				// Criar o data 
+				data = data_create2(size, arguments[1]);
+				// Verifica data
+				if (data == NULL) {
+					// Possivel mensagem de erro
+					printErrors(ERROR_SYS);
+					continue;
+				}
+				// Faz o pedido UPDATE
+				result = rtable_update(table, arguments[0], data);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_UPDATE + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
+				data_destroy(data);
+				break;
+
+				
+			case DEL : 
+				// Verifica argumentos
+				if (arguments == NULL || arguments[0] == NULL) {
+					// Possivel mensagem de erro
+					printErrors(DEL_NO_ARG);
+					continue;
+				}
+				// Faz o pedido DEL
+				result = rtable_del(table, arguments[0]);
+				// Cria a mensagem a imprimir
+				msg->opcode = OC_DEL + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
+				break;
+
+				
+			case SIZE :	
+				// Se o comando é SIZE
+				// arguments deve vir igual a null
+				// Verifica, se for diferente de NULL
+				// Significa que escreveu size qualquer_coisa_mais
+				if (arguments != NULL) {
+					// Possivel mensagem de erro
+					printErrors(NO_COMMAND);
+					continue;
+				}
+				// Faz pedido de SIZE
+				result = rtable_size(table);
+				// Cria mensagem e imprimir
+				msg->opcode = OC_SIZE + 1;
+				msg->c_type = CT_RESULT;
+				msg->content.result = result;
+				break;
+
+			case QUIT :
+				// Nota: arguments deve vir a null 
+				// Caso contrário consideramos erro
+				// Exemplo: quit qualquer_coisa_mais
+				if (arguments != NULL) {
+					// Possivel mensagem de erro
+					printErrors(NO_COMMAND);
+					continue;
+				}
+				// Informa client_stub que cliente deseja sair
+				result = rtable_undind(table);
+				// Sai do ciclo
+				stop = 1;
+				break;
+			}
+			// Fim do switch
+			// Envia a mensagem a ser imprimida
+			if (sigla != QUIT) {
+				print_msg(msg);
+				free_message(msg);
+				list_free_keys(arguments);
+			}
+			else {
+				free_message(msg);
+				// Liberta argumentos
+				list_free_keys(arguments);
+				return result;
+			}	
 	}
-  	return network_close(server);
+	// Fim do ciclo...
+	return OK;
 }
