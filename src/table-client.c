@@ -91,7 +91,7 @@ char ** getTokens (char* token) {
 
 // Talvez tenha de sr definido
 // Função que imprime uma mensagem 
-void print_msg(struct message_t *msg,const char* title) {
+void print_msg(struct message_t *msg, const char* title) {
 	int i;
 	printf("%s\n", title);
 	//printf("opcode = %i\n", msg->opcode);
@@ -179,9 +179,9 @@ void printErrors(int code) {
  ************************************************************/
 int main(int argc, char **argv){
 
-	struct rtable_t table;
+	struct rtable_t *table;
 	char input[81];
-	int stop, sigla, result;
+	int stop, sigla, result, size;
 	char *command, *token;
 	char **arguments, **keys, *key;
 	struct data_t *data;
@@ -203,7 +203,7 @@ int main(int argc, char **argv){
 
 	/* Usar r_table_bind para ligar-se a uma tablea remota */
 	// Passa ip:porto
-	table = r_table_bind(argv[1]);
+	table = rtable_bind(argv[1]);
 
 	/* Fazer ciclo até que o utilizador resolva fazer "quit" */
 	stop = 0;
@@ -262,7 +262,7 @@ int main(int argc, char **argv){
 				}
 				key = arguments[0];
 				// Faz o pedido PUT
-				result = rtable_put(table, key, value);
+				result = rtable_put(table, key, data);
 				// Libertar memória
 				data_destroy(data);
 				// Cria a mensagem a imprimir
@@ -376,7 +376,7 @@ int main(int argc, char **argv){
 			// Fim do switch
 			// Envia a mensagem a ser imprimida
 			if (sigla != QUIT) {
-				print_msg(msg);
+				print_msg(msg, msg_title_in);
 				free_message(msg);
 				list_free_keys(arguments);
 			}

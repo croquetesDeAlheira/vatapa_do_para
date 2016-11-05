@@ -242,6 +242,7 @@ int rtable_size(struct rtable_t *rtable){
  */
 char **rtable_get_keys(struct rtable_t *rtable){
 	struct message_t *msg_pedido, *msg_resposta;
+	char *all = "!";
 	// Verificar se rtable é válido
 	if(rtable == NULL){
 		perror("Problema com rtable\n");
@@ -256,6 +257,8 @@ char **rtable_get_keys(struct rtable_t *rtable){
 	// Mensagem a enviar
 	msg_pedido->opcode = OC_GET;
 	msg_pedido->c_type = CT_KEYS;
+	// Servidor vai verificar se content.key == !
+	msg_pedido->content.key = all;
 	// Receber a mensagem de resposta
 	msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
@@ -269,4 +272,6 @@ char **rtable_get_keys(struct rtable_t *rtable){
 
 /* Liberta a memória alocada por table_get_keys().
  */
-void rtable_free_keys(char **keys);
+void rtable_free_keys(char **keys){
+	table_free_keys(keys);
+}
