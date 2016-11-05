@@ -368,7 +368,7 @@ int main(int argc, char **argv){
 					continue;
 				}
 				// Informa client_stub que cliente deseja sair
-				result = rtable_undind(table);
+				result = rtable_unbind(table);
 				// Sai do ciclo
 				stop = 1;
 				break;

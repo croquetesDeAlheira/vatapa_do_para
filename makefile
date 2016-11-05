@@ -11,12 +11,12 @@ OBJ = obj
 SRC = src
 CFLAGS = -I include
 
-OBJFILES_DATA = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_data.o
-OBJFILES_ENTRY = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_entry.o
-OBJFILES_LIST = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_list.o
-OBJFILES_TABLE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/test_table.o 
-OBJFILES_MESSAGE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/test_message.o
-OBJFILES_CLIENT = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/message.o $(OBJ)/network_client.o $(OBJ)/table-client.o 
+#OBJFILES_DATA = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_data.o
+#OBJFILES_ENTRY = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_entry.o
+#OBJFILES_LIST = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_list.o
+#OBJFILES_TABLE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/test_table.o 
+#OBJFILES_MESSAGE = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/test_message.o
+OBJFILES_CLIENT = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/table.o $(OBJ)/message.o $(OBJ)/network_client.o $(OBJ)/table-client.o $(OBJ)/client_stub.o 
 OBJFILES_SERVER = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/message.o $(OBJ)/table.o $(OBJ)/table-server.o
 
 all: table-server table-client
@@ -27,11 +27,11 @@ table-client: $(OBJFILES_CLIENT)
 table-server: $(OBJFILES_SERVER)
 	gcc -o table-server $(OBJFILES_SERVER)
 	
-test_message: $(OBJFILES_MESSAGE)
-	gcc -o test_message $(OBJFILES_MESSAGE)
+#test_message: $(OBJFILES_MESSAGE)
+#	gcc -o test_message $(OBJFILES_MESSAGE)
 
-test_table: $(OBJFILES_TABLE)
-	gcc -o test_table $(OBJFILES_TABLE)
+#test_table: $(OBJFILES_TABLE)
+#	gcc -o test_table $(OBJFILES_TABLE)
 
 #test_list: $(OBJFILES_LIST)
 #	gcc -o test_list $(OBJFILES_LIST)
@@ -42,8 +42,13 @@ test_table: $(OBJFILES_TABLE)
 #test_data: $(OBJFILES_DATA)
 #	gcc -o test_data $(OBJFILES_DATA)
 
+# Ficheiros Fase_3
+
+$(OBJ)/client_stub.o: $(SRC)/client_stub.c $(INC)/client_stub-private.h $(INC)/message-private.h $(INC)/network_client-private.h
+	gcc -c $(SRC)/client_stub.c -o $(OBJ)/client_stub.o
+
 # Ficheiros .o Fase_2 2a parte
-$(OBJ)/table-client.o: $(SRC)/table-client.c $(INC)/network_client-private.h 
+$(OBJ)/table-client.o: $(SRC)/table-client.c $(INC)/network_client-private.h $(INC)/client_stub-private.h
 	gcc -c $(SRC)/table-client.c -o $(OBJ)/table-client.o
 
 $(OBJ)/network_client.o: $(SRC)/network_client.c $(INC)/network_client-private.h 
@@ -94,7 +99,7 @@ $(OBJ)/data.o: $(SRC)/data.c $(INC)/data.h
 			
 clean:
 	rm -f obj/*.o
-	rm -f test_table test_message table-server table-client
+	rm -f table-server table-client
 	rm -f *~
 	
 .PHONY: clean

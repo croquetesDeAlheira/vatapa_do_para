@@ -136,6 +136,7 @@ struct message_t *process_message(struct message_t *msg_pedido, struct table_t *
 			// c_type CT_KEYS
 			// c_type se for ! table_get_keys
 			// c_type se for key table_get
+			printf("key %s\n", msg_resposta->content.key);
 			msg_resposta->opcode = OC_GET_R;
 			if(strcmp(msg_pedido->content.key,all) == 0){
 				// Get de todas as chaves
