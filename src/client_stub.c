@@ -42,32 +42,200 @@ struct rtable_t *rtable_bind(const char *address_port){
  * toda a memória local. 
  * Retorna 0 se tudo correr bem e -1 em caso de erro.
  */
-int rtable_unbind(struct rtable_t *rtable);
+int rtable_unbind(struct rtable_t *rtable){
+	if(network_close(rtable->server) < 0){
+		perror("Problema ao terminar a associação entre cliente e tabela remota\n");
+		return ERROR;
+	}	
+	free(rtable);
+	return OK;
+}
 
 /* Função para adicionar um par chave valor na tabela remota.
  * Devolve 0 (ok) ou -1 (problemas).
  */
-int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value);
+int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificação se a rtable, key e value são válidos
+	if(rtable == NULL || key == NULL || value == NULL){
+		perror("Problema com rtable/key/value\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->opcode = OC_PUT;
+	msg_pedido->c_type = CT_ENTRY;
+	msg_pedido->content.entry = entry_create(key, value);
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	}
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.result;
+}
 
 /* Função para substituir na tabela remota, o valor associado à chave key.
  * Devolve 0 (OK) ou -1 em caso de erros.
  */
-int rable_update(struct rtable_t *rtable, char *key, struct data_t *value);
+int rable_update(struct rtable_t *rtable, char *key, struct data_t *value){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificação se a rtable, key e value são válidos
+	if(rtable == NULL || key == NULL || value == NULL){
+		perror("Problema com rtable/key/value\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->OC_UPDATE;
+	msg_pedido->c_type = CT_ENTRY;
+	msg_pedudo->content.entry = entry.create(key, value);
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	} 
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.result;	
+}
 
 /* Função para obter da tabela remota o valor associado à chave key.
  * Devolve NULL em caso de erro.
  */
-struct data_t *rtable_get(struct rtable_t *table, char *key);
+struct data_t *rtable_get(struct rtable_t *table, char *key){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificação se a rtable e key são válidos
+	if(rtable == NULL || key == NULL){
+		perror("Problema com rtable/key\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->opcode = OC_GET;
+	msg_pedido->c_type = CT_KEY;
+	msg_pedido->content.key = key;
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	}
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.data;
+}
+
+/* Função para substituir na tabela remota, o valor associado à chave key.
+ * Devolve 0 (OK) ou -1 em caso de erros.
+ */
+int rable_update(struct rtable_t *rtable, char *key, struct data_t *value){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificação se a rtable, key e value são válidos
+	if(rtable == NULL || key == NULL || value == NULL){
+		perror("Problema com rtable/key/value\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->OC_UPDATE;
+	msg_pedido->c_type = CT_ENTRY;
+	msg_pedudo->content.entry = entry.create(key, value);
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	} 
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.result;	
+}
 
 /* Função para remover um par chave valor da tabela remota, especificado 
  * pela chave key.
  * Devolve: 0 (OK) ou -1 em caso de erros.
  */
-int rtable_del(struct rtable_t *table, char *key);
+int rtable_del(struct rtable_t *table, char *key){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificação se a rtable e key são válidos
+	if(rtable == NULL || key == NULL){
+		perror("Problema com rtable/key\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->OC_DEL;
+	msg_pedido->c_type = CT_KEY;
+	msg_pedudo->content.entry = key;
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	} 
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.result;	
+
+}
 
 /* Devolve número de pares chave/valor na tabela remota.
  */
-int rtable_size(struct rtable_t *rtable);
+int rtable_size(struct rtable_t *rtable){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificar se rtable é válido
+	if(rtable == NULL){
+		perror("Problema com rtable\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->OC_SIZE;
+	msg_pedido->c_type = CT_RESULT;
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	} 
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.result;	
+}
 
 /* Devolve um array de char * com a cópia de todas as keys da
  * tabela remota, e um último elemento a NULL.
