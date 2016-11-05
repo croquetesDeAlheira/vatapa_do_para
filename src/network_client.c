@@ -8,18 +8,12 @@
 
 #include "../include/network_client-private.h"
 #include "../include/inet.h"
+#include "../include/codes.h"
 
 
 #include <stdlib.h>
 #include <errno.h>
 #include <netinet/in.h>
-
-
-
-#define ERROR -1
-#define OK 0
-
-
 
 struct server_t *network_connect(const char *address_port){
 

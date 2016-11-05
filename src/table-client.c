@@ -20,24 +20,8 @@
 
 #include "../include/network_client-private.h"
 #include "../include/message-private.h"
-
-// Definindo os tipos de comandos
-#define BADKEY -1
-#define PUT 1
-#define GET 2
-#define UPDATE 3
-#define DEL 4
-#define SIZE 5
-#define QUIT 6
-
-// Códigos de msgs de erros
-#define SEM_ARG 70
-#define PUT_NO_ARGS 71
-#define NO_COMMAND 72
-#define GET_NO_ARG 73
-#define ERROR_SYS 74
-#define UPDATE_NO_ARGS 75
-#define DEL_NO_ARG 76
+#include "../include/client_stub-private.h"
+#include "../include/codes.h"
 
 const char space[2] = " ";
 const char all_keys[2] = "!";
@@ -215,7 +199,7 @@ int main(int argc, char **argv){
 	if (argc != 2 || argv == NULL || argv[1] == NULL) { 
 		printf("Erro de argumentos.\n");
 		printf("Exemplo de uso: /table_client 10.101.148.144:54321\n");
-		return  ERROR; 
+		return ERROR; 
 	}
 
 	/* Usar r_table_bind para ligar-se a uma tablea remota */
@@ -249,7 +233,7 @@ int main(int argc, char **argv){
 		arguments = getTokens(token);
 		// Cria a mensagem a encapsular os resultados
 		// obtidos do servidor
-		msg = (struct message_t)malloc(sizeof(struct message_t));
+		msg = (struct message_t *)malloc(sizeof(struct message_t *));
 
 		// Faz o switch dos comandos
 		switch(sigla) {
