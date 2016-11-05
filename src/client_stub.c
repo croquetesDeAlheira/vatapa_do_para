@@ -99,7 +99,7 @@ int rable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	}
 	// Mensagem a enviar
-	msg_pedido->OC_UPDATE;
+	msg_pedido->opcode = OC_UPDATE;
 	msg_pedido->c_type = CT_ENTRY;
 	msg_pedudo->content.entry = entry.create(key, value);
 	// Receber a mensagem de resposta
@@ -131,7 +131,7 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	}
 	// Mensagem a enviar
 	msg_pedido->opcode = OC_GET;
-	msg_pedido->c_type = CT_KEY;
+	msg_pedido->c_type = CT_VALUE;
 	msg_pedido->content.key = key;
 	// Receber a mensagem de resposta
 	msg_resposta = network_send_receive(rtable->server, msg_pedido);
@@ -161,7 +161,7 @@ int rable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	}
 	// Mensagem a enviar
-	msg_pedido->OC_UPDATE;
+	msg_pedido->opcode = OC_UPDATE;
 	msg_pedido->c_type = CT_ENTRY;
 	msg_pedudo->content.entry = entry.create(key, value);
 	// Receber a mensagem de resposta
@@ -193,7 +193,7 @@ int rtable_del(struct rtable_t *table, char *key){
 		return ERROR;
 	}
 	// Mensagem a enviar
-	msg_pedido->OC_DEL;
+	msg_pedido->opcode = OC_DEL;
 	msg_pedido->c_type = CT_KEY;
 	msg_pedudo->content.entry = key;
 	// Receber a mensagem de resposta
@@ -224,7 +224,7 @@ int rtable_size(struct rtable_t *rtable){
 		return ERROR;
 	}
 	// Mensagem a enviar
-	msg_pedido->OC_SIZE;
+	msg_pedido->opcode = OC_SIZE;
 	msg_pedido->c_type = CT_RESULT;
 	// Receber a mensagem de resposta
 	msg_resposta = network_send_receive(rtable->server, msg_pedido);
@@ -240,7 +240,32 @@ int rtable_size(struct rtable_t *rtable){
 /* Devolve um array de char * com a cópia de todas as keys da
  * tabela remota, e um último elemento a NULL.
  */
-char **rtable_get_keys(struct rtable_t *rtable);
+char **rtable_get_keys(struct rtable_t *rtable){
+	struct message_t *msg_pedido, *msg_resposta;
+	// Verificar se rtable é válido
+	if(rtable == NULL){
+		perror("Problema com rtable\n");
+		return ERROR;
+	}
+	// Criação e alocação da mensagem de pedido
+	struct message_t *msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	if(msg_pedido == NULL){
+		perror("Problema na criação da mensagem de pedido\n");
+		return ERROR;
+	}
+	// Mensagem a enviar
+	msg_pedido->opcode = OC_GET;
+	msg_pedido->c_type = CT_KEYS;
+	// Receber a mensagem de resposta
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	} 
+	// Mensagem de pedido já não é necessária
+	free_message(msg_pedido);
+	return msg_resposta->content.keys;	
+}
 
 /* Liberta a memória alocada por table_get_keys().
  */
