@@ -7,7 +7,7 @@
  */
 struct rtable_t{
 	struct server_t server;
-}
+};
 
 
 #endif
