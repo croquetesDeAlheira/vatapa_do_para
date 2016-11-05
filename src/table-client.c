@@ -105,7 +105,6 @@ void print_msg(struct message_t *msg,const char* title) {
 			printf("key: %s\n", msg->content.key);
 		}break;
 		case CT_KEYS:{
-				//for(i = 0; msg->content.keys[i] != NULL; i++) {
 				int i = 0;
 				while(msg->content.keys[i] != NULL){
 					printf("key[%d]: %s\n", i, msg->content.keys[i]);
@@ -376,11 +375,17 @@ int main(int argc, char **argv){
 			}
 			// Fim do switch
 			// Envia a mensagem a ser imprimida
-			if (sigla != QUIT)
+			if (sigla != QUIT) {
 				print_msg(msg);
-			free_message(msg);
-			// Liberta argumentos
-			list_free_keys(arguments);
+				free_message(msg);
+				list_free_keys(arguments);
+			}
+			else {
+				free_message(msg);
+				// Liberta argumentos
+				list_free_keys(arguments);
+				return result;
+			}	
 	}
 	// Fim do ciclo...
 	return OK;

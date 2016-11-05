@@ -22,4 +22,9 @@
 #define UPDATE_NO_ARGS 75
 #define DEL_NO_ARG 76
 
+// Códigos de erros possiveis
+// associados à tabela de servidor
+#define KEY_ALREADY_EXIST 30
+#define UPDATE_KEY_NOT_EXIST 31
+
 #endif
