@@ -7,5 +7,7 @@
 
 - Quando fazemos del key, costuma aparecer o erro
 *** Error in `./table-client': double free or corruption (fasttop): 0x094cd0a8 ***
+- Quando fazemos del key, sem que esta existe, duas vezes seguida então o erro em cima aparece
+
 
 - O table client não está a reconhecer o size e quit
