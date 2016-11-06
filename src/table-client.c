@@ -46,7 +46,7 @@ int keyfromstring(char *key) {
 	int i;
 	// Estrutura definida em network_client-private.h
 	struct commands_t p;
-
+	printf("key no keyfromstring %s\n", key);
   for (i = 0; i < NKEYS; i++) {
   	p = lookUpTabble[i];
 	if (strcmp(p.key, key) == 0)
@@ -124,6 +124,7 @@ void print_msg(struct message_t *msg, const char* title) {
 }
 
 void printErrors(int code) {
+	printf("code %i\n", code);	
 	switch (code) {
 		case SEM_ARG :
 			printf("Comando nao conhecido, por favor tente de novo\n");
@@ -225,7 +226,7 @@ int main(int argc, char **argv){
 			printErrors(NO_COMMAND);
 			continue;
 		}
-
+		printf("antes do sigle =\n");
 		// Sigla do comando para poder correr o switch
 		sigla = keyfromstring(token);
 		// Determina argumentos caso existam
@@ -233,17 +234,19 @@ int main(int argc, char **argv){
 		// Cria a mensagem a encapsular os resultados
 		// obtidos do servidor
 		msg = (struct message_t *)malloc(sizeof(struct message_t *));
-
+		printf("sigla %i\n", sigla);
 		// Faz o switch dos comandos
 		switch(sigla) {
 			
-			case BADKEY :					
+			case BADKEY :		
+				printf("badkey %i\n", BADKEY);			
 				// Comando inválido ok
 				printErrors(NO_COMMAND);
 				break;
 
 			
 			case PUT :
+				printf("put %i\n", PUT);	
 				// Verifica possiveis erros
 				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
@@ -273,6 +276,7 @@ int main(int argc, char **argv){
 
 			
 			case GET :
+				printf("get %i\n", GET);	
 				// Argumento do get
 				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro ok
@@ -299,6 +303,7 @@ int main(int argc, char **argv){
 
 			
 			case UPDATE :
+				printf("update %i\n", UPDATE);	
 				if (arguments == NULL ||arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
 					printErrors(UPDATE_NO_ARGS);
@@ -324,7 +329,8 @@ int main(int argc, char **argv){
 				break;
 
 				
-			case DEL : 
+			case DEL : 		
+				printf("del %i\n", DEL);	
 				// Verifica argumentos
 				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro
@@ -340,29 +346,43 @@ int main(int argc, char **argv){
 				break;
 
 				
-			case SIZE :	
+			case SIZE :
+				printf("sizesdfsdf %i\n", SIZE);	
 				// Se o comando é SIZE
 				// arguments deve vir igual a null
 				// Verifica, se for diferente de NULL
 				// Significa que escreveu size qualquer_coisa_mais
+				//////////////////////////////////////////
+				//// Antes estava arguments != NULL
+				// O problema está aqui
+				//////////////
 				if (arguments != NULL) {
+					printf("s1.1\n");	
 					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
 					continue;
 				}
 				// Faz pedido de SIZE
+				printf("s1\n");	
 				result = rtable_size(table);
 				// Cria mensagem e imprimir
+				printf("s2\n");	
 				msg->opcode = OC_SIZE + 1;
 				msg->c_type = CT_RESULT;
 				msg->content.result = result;
+				printf("s3\n");	
 				break;
 
 			case QUIT :
+				printf("quit %i\n", QUIT);	
 				// Nota: arguments deve vir a null 
 				// Caso contrário consideramos erro
 				// Exemplo: quit qualquer_coisa_mais
-				if (arguments != NULL) {
+				//////////////////////////////////////////
+				// Antes estava arguments != NULL
+				// O problema está aqui
+				////////////
+				if (arguments == NULL) {
 					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
 					continue;
@@ -376,11 +396,13 @@ int main(int argc, char **argv){
 			// Fim do switch
 			// Envia a mensagem a ser imprimida
 			if (sigla != QUIT) {
+				printf("sigla != QUIT\n");	
 				print_msg(msg, msg_title_in);
 				free_message(msg);
 				list_free_keys(arguments);
 			}
 			else {
+				printf("sigla == QUIT\n");	
 				free_message(msg);
 				// Liberta argumentos
 				list_free_keys(arguments);
