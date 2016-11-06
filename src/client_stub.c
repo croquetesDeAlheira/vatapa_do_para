@@ -65,7 +65,7 @@ int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	}
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return ERROR;
@@ -96,7 +96,7 @@ int rtable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	}
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return ERROR;
@@ -128,7 +128,7 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 		return NULL;
 	}
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return NULL;
@@ -166,7 +166,7 @@ int rtable_del(struct rtable_t *table, char *key){
 		return ERROR;
 	}
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return ERROR;
@@ -197,7 +197,7 @@ int rtable_size(struct rtable_t *rtable){
 		return ERROR;
 	}
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return ERROR;
@@ -229,7 +229,7 @@ char **rtable_get_keys(struct rtable_t *rtable){
 	}
 	printf("get1\n");
 	// Criação e alocação da mensagem de pedido
-	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t *));
+	msg_pedido = (struct message_t *)malloc(sizeof(struct message_t));
 	if(msg_pedido == NULL){
 		perror("Problema na criação da mensagem de pedido\n");
 		return NULL;
