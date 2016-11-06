@@ -11,3 +11,9 @@
 - Exemplo: se fizermos del a, update a, sem que este exista o erro em cima volta a aparecer
 
 - O table client não está a reconhecer o size e quit
+
+- Sequência de códigos
+	put a a
+	del a
+	put a a
+Erro: *** Error in `./table-client': malloc(): memory corruption (fast): 0x080c0069 ***
