@@ -23,8 +23,8 @@
 
 #define ERROR -1
 #define OK 0
-#define TRUE 1
-#define FALSE 0
+#define TRUE 1 // boolean true
+#define FALSE 0 // boolean false
 #define NCLIENTS 4 // Número de sockets (uma para listening)
 #define TIMEOUT 5000 // em milisegundos
 
@@ -94,6 +94,10 @@ int read_all(int sock, char *buf, int len){
 	int bufsize = len;
 	while(len > 0){
 		int res = read(sock, buf, len);
+		if(res == 0){
+			//client disconnected...
+			return ERROR;
+		}
 		if(res < 0){
 			if(errno == EINTR) continue;
 			perror("read failed:");
@@ -115,7 +119,6 @@ int read_all(int sock, char *buf, int len){
 	Envia a resposta.
 */
 int network_receive_send(int sockfd){
-	printf("starting network_receive_send\n");
 	char *message_resposta, *message_pedido;
 	int msg_length;
 	int message_size, msg_size, result;
@@ -125,7 +128,9 @@ int network_receive_send(int sockfd){
 	   mensagem de pedido que será recebida de seguida.*/
 	result = read_all(sockfd, (char *) &msg_size, _INT);
 	/* Verificar se a receção teve sucesso */
-	if(result != _INT){return ERROR;}
+	if(result != _INT || result == ERROR){return ERROR;}
+
+
 
 	/* Alocar memória para receber o número de bytes da
 	   mensagem de pedido. */
@@ -144,7 +149,6 @@ int network_receive_send(int sockfd){
 	if(msg_pedido == NULL){return ERROR;}
 
 	/* Processar a mensagem */
-	printf("invoke\n");
 	msg_resposta = invoke(msg_pedido);
 
 	/* Serializar a mensagem recebida */
@@ -176,20 +180,27 @@ int network_receive_send(int sockfd){
 
 
 int main(int argc, char **argv){
-	
+	//remover nao usados depois...
 	int listening_socket;
 	int connsock;
 	int result;
-	int client_on = 1;
+	int client_on = TRUE;
+	int server_on = TRUE;
 	struct pollfd socketsPoll[NCLIENTS];
 	struct sockaddr_in client;
 	socklen_t size_client;
+	int checkPoll;
+	int numFDs = 1;
+	int activeFDs = 0;
+	int close_conn;
+	int compress_list;
+	int i;
 	
 	// Nota: 3 argumentos. O nome do programa conta!
 	if (argc != 3){
 		printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
 		printf("Exemplo de uso: ./table-server 54321 10\n");
-		return -1;
+		return ERROR;
 	}
 
 	//Codigo de acordo com as normas da IBM
@@ -214,104 +225,99 @@ int main(int argc, char **argv){
 	socketsPoll[0].events = POLLIN;
 
 	/* ciclo para receber os clients conectados */
-	int checkPoll;
-	int numFDs = 1;
-	int activeFDs = 0;
-	int close_conn;
-	int compress_list;
-	int i;
-	printf("waiting clients...\n");
+
+	printf("a espera de clientes...\n");
 	//call poll and check
-	while(1){ //while no cntrl c
-	while((checkPoll = poll(socketsPoll, numFDs, TIMEOUT)) >= 0){
+	while(server_on){ //while no cntrl c
+		while((checkPoll = poll(socketsPoll, numFDs, TIMEOUT)) >= 0){
 
-		//verifica se nao houve evento em nenhum socket
-		if(checkPoll == 0){
-			perror("timeout expired on poll()");
-			continue;
-		}else {
+			//verifica se nao houve evento em nenhum socket
+			if(checkPoll == 0){
+				perror("timeout expired on poll()");
+				continue;
+			}else {
 
-		/* então existe pelo menos 1 poll active, QUAL???? loops ;) */
-		for(i = 0; i < numFDs; i++){
-			//procura...0 nao houve return events
-			if(socketsPoll[i].revents == 0){continue;}
+				/* então existe pelo menos 1 poll active, QUAL???? loops ;) */
+				for(i = 0; i < numFDs; i++){
+					//procura...0 nao houve return events
+					if(socketsPoll[i].revents == 0){continue;}
 
-			//se houve temos de ver se foi POLLIN
-			if(socketsPoll[i].revents != POLLIN){
-     		   printf("  Error! revents = %d\n", socketsPoll[i].revents);
-       		   break;
-     		}
-
-
-     		//se for POLLIN pode ser no listening_socket ou noutro qualquer...
-     		if(socketsPoll[i].fd == listening_socket){
-     			printf("listening pollin\n");
-     			//quer dizer que temos de aceitar todas as ligações com a nossa socket listening
-     				connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
-     				printf("connsock %d\n", connsock);
-     				if (connsock < 0){
-           				if (errno != EWOULDBLOCK){
-              				perror("  accept() failed");
-           			 	}
-           			 	break;
-          			}
-          			socketsPoll[numFDs].fd = connsock;
-          			socketsPoll[numFDs].events = POLLIN;
-          			numFDs++;
-     			
-     		//fim do if do listening
-     		}else{/* não é o listening....então deve ser outro...*/
-     			printf("connection pollin\n");
-     			close_conn = FALSE;
-     			while(TRUE){
-     				printf("started while true \n");
-     				//receive data
-     				int result = network_receive_send(socketsPoll[i].fd);
-     				if(result < 0){ 
-     					//ou mal recebida ou o cliente desconectou
-     					// -> close connection
-     					printf("ocorreu um error\n");
-     					close_conn = TRUE;
-     					break;
-
-     				}else{
-     					printf("sent everything\n");
+					//se houve temos de ver se foi POLLIN
+					if(socketsPoll[i].revents != POLLIN){
+     					printf("  Error! revents = %d\n", socketsPoll[i].revents);
+       					break;
      				}
-     			}//fim da ligacao cliente-servidor
-     			compress_list == FALSE;
 
-     			if(close_conn){
-     				close(socketsPoll[i].fd);
-          			socketsPoll[i].fd = -1;
-          			compress_list = TRUE;
-     			}
-     		}//fim do else
-		}//fim do for numFDs
-	}
-	}//fim do for polls
+
+     				//se for POLLIN pode ser no listening_socket ou noutro qualquer...
+     				if(socketsPoll[i].fd == listening_socket){
+     					//quer dizer que temos de aceitar todas as ligações com a nossa socket listening
+     					connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
+     					if (connsock < 0){
+           					if (errno != EWOULDBLOCK){
+              					perror("  accept() failed");
+           			 		}
+           			 		break;
+          				}
+          				socketsPoll[numFDs].fd = connsock;
+          				socketsPoll[numFDs].events = POLLIN;
+          				numFDs++;
+     			
+     					//fim do if do listening
+     				}else{/* não é o listening....então deve ser outro...*/
+     					close_conn = FALSE;
+     					client_on = TRUE;
+     					printf("cliente conectado\n");
+     					while(client_on){
+     						//receive data
+     						int result = network_receive_send(socketsPoll[i].fd);
+     						if(result < 0){ 
+     							//ou mal recebida ou o cliente desconectou
+     							// -> close connection
+     							printf("ocorreu um error ou cliente desconectou\n");
+     							close_conn = TRUE;
+     							client_on = FALSE;
+     							break;
+
+  		   					}
+     					}//fim da ligacao cliente-servidor
+     					compress_list == FALSE;
+
+     					if(close_conn){
+     						//fecha o fileDescriptor
+     						close(socketsPoll[i].fd);
+     						//set fd -1
+          					socketsPoll[i].fd = -1;
+          					compress_list = TRUE;
+     					}	
+     				}//fim do else
+				}//fim do for numFDs
+			}
+		}//fim do for polls
 
 
 		//se a lista tiver fragmentada, devemos comprimir 
 		int j;
 		if (compress_list){
-    	  compress_list = FALSE;
-    	  for (i = 0; i < numFDs; i++){
-    	    if (socketsPoll[i].fd == -1){
-    	      for(j = i; j < numFDs; j++){
-    	        socketsPoll[j].fd = socketsPoll[j+1].fd;
-    	      }
-    	      numFDs--;
-    	    }
-    	  }
+    		compress_list = FALSE;
+    		for (i = 0; i < numFDs; i++){
+    			if (socketsPoll[i].fd == -1){
+    		    	for(j = i; j < numFDs; j++){
+    		        	socketsPoll[j].fd = socketsPoll[j+1].fd;
+    		      	}
+    		    	numFDs--;
+    		    }
+    		}
     	}
 
-    }
+	}
     //close dos sockets
     for (i = 0; i < numFDs; i++){
     	if(socketsPoll[i].fd >= 0){
      		close(socketsPoll[i].fd);
      	}
  	}
+
 }
 
 

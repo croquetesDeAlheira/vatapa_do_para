@@ -296,5 +296,8 @@ int main(int argc, char **argv){
 			
 		}
 	}
-  	return network_close(server);
+	int result = network_close(server);
+	printf("result = %d\n", result );
+  	//return network_close(server);
+  	return 0;
 }

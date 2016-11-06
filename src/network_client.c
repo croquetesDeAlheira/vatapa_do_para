@@ -164,7 +164,7 @@ int network_close(struct server_t *server){
 	/* Verificar parâmetros de entrada */
 	if(server == NULL){ return ERROR;}
 	/* Terminar ligação ao servidor */
-	close(server->socket);
+	if(close(server->socket) < 0){return ERROR;}
 	/* Libertar memória */
 	free(server->addr);
 	free(server);
