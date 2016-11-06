@@ -13,7 +13,8 @@
 */
 #include <error.h>
 #include <errno.h>
-#include <poll.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
 
 #include "../include/inet.h"
 #include "../include/table-private.h"
@@ -22,10 +23,10 @@
 
 #define ERROR -1
 #define OK 0
-#define TRUE 0
-#define FALSE -1
+#define TRUE 1
+#define FALSE 0
 #define NCLIENTS 4 // Número de sockets (uma para listening)
-#define TIMEOUT 1000 // em milisegundos
+#define TIMEOUT 5000 // em milisegundos
 
 /* Função para preparar uma socket de receção de pedidos de ligação.
 */
@@ -50,6 +51,8 @@ int make_server_socket(short port){
   server.sin_family = AF_INET;
   server.sin_port = htons(port);  
   server.sin_addr.s_addr = htonl(INADDR_ANY);
+
+
 
   if (bind(socket_fd, (struct sockaddr *) &server, sizeof(server)) < 0){
       perror("Erro ao fazer bind");
@@ -112,7 +115,7 @@ int read_all(int sock, char *buf, int len){
 	Envia a resposta.
 */
 int network_receive_send(int sockfd){
-
+	printf("starting network_receive_send\n");
 	char *message_resposta, *message_pedido;
 	int msg_length;
 	int message_size, msg_size, result;
@@ -141,6 +144,7 @@ int network_receive_send(int sockfd){
 	if(msg_pedido == NULL){return ERROR;}
 
 	/* Processar a mensagem */
+	printf("invoke\n");
 	msg_resposta = invoke(msg_pedido);
 
 	/* Serializar a mensagem recebida */
@@ -193,6 +197,7 @@ int main(int argc, char **argv){
 	listening_socket = make_server_socket(atoi(argv[1]));
 	//check if done right
 	if(listening_socket < 0){return -1;}
+	printf("%d\n", listening_socket );
 
 	/* initialize table */
 	if(table_skel_init(atoi(argv[2])) == ERROR){ 
@@ -218,13 +223,13 @@ int main(int argc, char **argv){
 	printf("waiting clients...\n");
 	//call poll and check
 	while(1){ //while no cntrl c
-	while((checkPoll = poll(socketsPoll, numFDs, 0)) >= 0){
+	while((checkPoll = poll(socketsPoll, numFDs, TIMEOUT)) >= 0){
 
 		//verifica se nao houve evento em nenhum socket
 		if(checkPoll == 0){
 			perror("timeout expired on poll()");
 			continue;
-		}
+		}else {
 
 		/* então existe pelo menos 1 poll active, QUAL???? loops ;) */
 		for(i = 0; i < numFDs; i++){
@@ -259,14 +264,18 @@ int main(int argc, char **argv){
      			printf("connection pollin\n");
      			close_conn = FALSE;
      			while(TRUE){
+     				printf("started while true \n");
      				//receive data
-     				if(network_receive_send(socketsPoll[i].fd) < 0){ 
+     				int result = network_receive_send(socketsPoll[i].fd);
+     				if(result < 0){ 
      					//ou mal recebida ou o cliente desconectou
      					// -> close connection
      					printf("ocorreu um error\n");
      					close_conn = TRUE;
      					break;
 
+     				}else{
+     					printf("sent everything\n");
      				}
      			}//fim da ligacao cliente-servidor
      			compress_list == FALSE;
@@ -278,6 +287,7 @@ int main(int argc, char **argv){
      			}
      		}//fim do else
 		}//fim do for numFDs
+	}
 	}//fim do for polls
 
 
