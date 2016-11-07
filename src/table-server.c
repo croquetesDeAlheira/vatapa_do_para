@@ -26,7 +26,7 @@
 #define TRUE 1 // boolean true
 #define FALSE 0 // boolean false
 #define NCLIENTS 4 // Número de sockets (uma para listening)
-#define TIMEOUT 5000 // em milisegundos
+#define TIMEOUT 1000 // em milisegundos
 
 /* Função para preparar uma socket de receção de pedidos de ligação.
 */
@@ -268,55 +268,45 @@ int main(int argc, char **argv){
      					close_conn = FALSE;
      					client_on = TRUE;
      					printf("cliente conectado\n");
-     					while(client_on){
+     					//while(client_on){
      						//receive data
-     						int result = network_receive_send(socketsPoll[i].fd);
-     						if(result < 0){ 
-     							//ou mal recebida ou o cliente desconectou
-     							// -> close connection
-     							printf("ocorreu um error ou cliente desconectou\n");
-     							close_conn = TRUE;
-     							client_on = FALSE;
-     							break;
-
-  		   					}
-     					}//fim da ligacao cliente-servidor
-     					compress_list == FALSE;
-
-     					if(close_conn){
-     						//fecha o fileDescriptor
+     					int result = network_receive_send(socketsPoll[i].fd);
+     					if(result < 0){ 
+     						//ou mal recebida ou o cliente desconectou
+     						// -> close connection
+     						printf("ocorreu um error ou cliente desconectou\n");
+     						 //fecha o fileDescriptor
      						close(socketsPoll[i].fd);
      						//set fd -1
           					socketsPoll[i].fd = -1;
           					compress_list = TRUE;
+							int j;
+							if (compress_list){
+    							compress_list = FALSE;
+    							for (i = 0; i < numFDs; i++){
+    								if (socketsPoll[i].fd == -1){
+    		    						for(j = i; j < numFDs; j++){
+    		        						socketsPoll[j].fd = socketsPoll[j+1].fd;
+    		      						}
+    		    						numFDs--;
+    		    					}
+    							}
+    						}
      					}	
-     				}//fim do else
-				}//fim do for numFDs
-			}
-		}//fim do for polls
+	   				}//fim da ligacao cliente-servidor
+     			}//fim do else
+			}//fim do for numFDs
+		}
+			//se a lista tiver fragmentada, devemos comprimir 
+	}//fim do for polls
 
-
-		//se a lista tiver fragmentada, devemos comprimir 
-		int j;
-		if (compress_list){
-    		compress_list = FALSE;
-    		for (i = 0; i < numFDs; i++){
-    			if (socketsPoll[i].fd == -1){
-    		    	for(j = i; j < numFDs; j++){
-    		        	socketsPoll[j].fd = socketsPoll[j+1].fd;
-    		      	}
-    		    	numFDs--;
-    		    }
-    		}
-    	}
-
-	}
     //close dos sockets
     for (i = 0; i < numFDs; i++){
     	if(socketsPoll[i].fd >= 0){
      		close(socketsPoll[i].fd);
      	}
  	}
+
 
 }
 
