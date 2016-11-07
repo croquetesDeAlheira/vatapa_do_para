@@ -17,11 +17,13 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../include/network_client-private.h"
 #include "../include/message-private.h"
 #include "../include/client_stub-private.h"
 #include "../include/codes.h"
+s
 
 const char space[2] = " ";
 const char all_keys[2] = "!";
@@ -58,33 +60,35 @@ int keyfromstring(char *key) {
 // Devolve um apontador de apontadores
 // contendo o resto dos tokens
 char ** getTokens (char* token) {
-	char **tokens, **result;
-	char *p;
-	int i, size;
+	char **p, **result;
+	int i, n;
 
-	tokens = (char**)malloc(3 * sizeof(char*));
-	if (tokens == NULL) { return NULL; }
-	// Le o próximo token
 	token = strtok(NULL, space);
-	
-	size = 0;
-	i = 0;
-	while (token != NULL) {
-		tokens[i] = strdup(token);
+	if (token == NULL)
+		return NULL;
+
+	p = (char**)calloc(2 ,sizeof(char*));
+
+	n = 0;
+	for (i = 0; i < 2 && token != NULL; i++) {
+		p[i] = strdup(token);
+		n++;
 		token = strtok(NULL, space);
-		i++;
-		size++;
 	}
 
-	result = (char**)malloc((size + 1) * sizeof(char*));
-	
-	for(i = 0; i < size; i++) {
-		result[i] = strdup(tokens[i]);
-		free(tokens[i]);
-	}
+	// Reserva memormia certa
+	result = (char**)calloc((n + 1), sizeof(char*));
 
-	free(tokens);
-	result[size] = NULL;
+	//Copiar a memoria certa
+	for(i = 0; i < n; i++) {
+		result[i] = strdup(p[i]);
+		free(p[i]);
+	}
+	// Ultima posição aponta a NULL;
+	result[n] = NULL;
+
+	// Liberta memoria auxiliar
+	free(p);
 
 	return result;
 }
@@ -182,11 +186,12 @@ int main(int argc, char **argv){
 
 	struct rtable_t *table;
 	char input[81];
-	int stop, sigla, result, size;
+	int stop, sigla, result, size, print;
 	char *command, *token;
 	char **arguments, **keys, *key;
 	struct data_t *data;
 	struct message_t *msg;
+
 
 	//const char quit[5] = "quit";
 	const char ip_port_seperator[2] = ":";
@@ -209,7 +214,8 @@ int main(int argc, char **argv){
 	/* Fazer ciclo até que o utilizador resolva fazer "quit" */
 	stop = 0;
  	while (stop == 0) { 
-
+ 		// Parte do principio que é para imprimir mensagem
+ 		print = 1;
 		printf(">>> "); // Mostrar a prompt para receber comando
 
 		// Recebe o comando por parte utilizador
@@ -224,6 +230,7 @@ int main(int argc, char **argv){
 		//Confirma se tem comando
 		if (token == NULL) {
 			printErrors(NO_COMMAND);
+			// Duvida!?
 			continue;
 		}
 		printf("antes do sigle =\n");
@@ -233,7 +240,7 @@ int main(int argc, char **argv){
 		arguments = getTokens(token);
 		// Cria a mensagem a encapsular os resultados
 		// obtidos do servidor
-		msg = (struct message_t *)malloc(sizeof(struct message_t *));
+		msg = (struct message_t *)calloc(1,sizeof(struct message_t ));
 		printf("sigla %i\n", sigla);
 		// Faz o switch dos comandos
 		switch(sigla) {
@@ -242,16 +249,18 @@ int main(int argc, char **argv){
 				printf("badkey %i\n", BADKEY);			
 				// Comando inválido ok
 				printErrors(NO_COMMAND);
+				print = 0;
 				break;
 
 			
 			case PUT :
 				printf("put %i\n", PUT);	
 				// Verifica possiveis erros
-				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
+				if (arguments == NULL) {
 					// Possivel mensagem de erro
 					printErrors(PUT_NO_ARGS);
-					continue;
+					print = 0;
+					break;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -261,11 +270,11 @@ int main(int argc, char **argv){
 				if (data == NULL) {
 					// Possivel mensagem de erro ok
 					printErrors(ERROR_SYS);
-					continue;
+					print = 0;
+					break;
 				}
-				key = arguments[0];
 				// Faz o pedido PUT
-				result = rtable_put(table, key, data);
+				result = rtable_put(table, arguments[0], data);
 				// Libertar memória
 				data_destroy(data);
 				// Cria a mensagem a imprimir
@@ -278,10 +287,11 @@ int main(int argc, char **argv){
 			case GET :
 				printf("get %i\n", GET);	
 				// Argumento do get
-				if (arguments == NULL || arguments[0] == NULL) {
+				if (arguments == NULL) {
 					// Possivel mensagem de erro ok
 					printErrors(NO_COMMAND);
-					continue;
+					print = 0;
+					break;
 				}
 				// Faz o pedido GET key ou GET all_keys
 				if (strcmp(arguments[0], all_keys) == 0) {
@@ -292,8 +302,7 @@ int main(int argc, char **argv){
 					msg->content.keys = keys;
 				}
 				else {
-					key = arguments[0];
-					data = rtable_get(table, key);
+					data = rtable_get(table, arguments[0]);
 					// Cria a mensagem a imprimir
 					msg->opcode = OC_GET + 1;
 					msg->c_type = CT_VALUE;
@@ -304,10 +313,11 @@ int main(int argc, char **argv){
 			
 			case UPDATE :
 				printf("update %i\n", UPDATE);	
-				if (arguments == NULL ||arguments[0] == NULL || arguments[1] == NULL) {
+				if (arguments == NULL) {
 					// Possivel mensagem de erro
 					printErrors(UPDATE_NO_ARGS);
-					continue;
+					print = 0;
+					break;
 				}
 				// Tamanho do data
 				size = strlen(arguments[1]) + 1;
@@ -317,7 +327,8 @@ int main(int argc, char **argv){
 				if (data == NULL) {
 					// Possivel mensagem de erro
 					printErrors(ERROR_SYS);
-					continue;
+					print = 0;
+					break;
 				}
 				// Faz o pedido UPDATE
 				result = rtable_update(table, arguments[0], data);
@@ -332,10 +343,11 @@ int main(int argc, char **argv){
 			case DEL : 		
 				printf("del %i\n", DEL);	
 				// Verifica argumentos
-				if (arguments == NULL || arguments[0] == NULL) {
+				if (arguments == NULL) {
 					// Possivel mensagem de erro
 					printErrors(DEL_NO_ARG);
-					continue;
+					print = 0;
+					break;
 				}
 				// Faz o pedido DEL
 				result = rtable_del(table, arguments[0]);
@@ -360,7 +372,8 @@ int main(int argc, char **argv){
 					printf("s1.1\n");	
 					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
-					continue;
+					print = 0;
+					break;
 				}
 				// Faz pedido de SIZE
 				printf("s1\n");	
@@ -382,10 +395,11 @@ int main(int argc, char **argv){
 				// Antes estava arguments != NULL
 				// O problema está aqui
 				////////////
-				if (arguments == NULL) {
+				if (arguments != NULL) {
 					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
-					continue;
+					print = 0;
+					break;
 				}
 				// Informa client_stub que cliente deseja sair
 				result = rtable_unbind(table);
@@ -395,19 +409,12 @@ int main(int argc, char **argv){
 			}
 			// Fim do switch
 			// Envia a mensagem a ser imprimida
-			if (sigla != QUIT) {
-				printf("sigla != QUIT\n");	
+			if (print == 1)
 				print_msg(msg, msg_title_in);
-				free_message(msg);
-				list_free_keys(arguments);
-			}
-			else {
-				printf("sigla == QUIT\n");	
-				free_message(msg);
-				// Liberta argumentos
-				list_free_keys(arguments);
-				return result;
-			}	
+			// Liberta memória dos argumentos
+			table_free_keys(arguments);
+			// Liberta dados da msg
+			free_message(msg);
 	}
 	// Fim do ciclo...
 	return OK;
