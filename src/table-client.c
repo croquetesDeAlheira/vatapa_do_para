@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "../include/network_client-private.h"
 #include "../include/message-private.h"
@@ -200,16 +201,27 @@ int main(int argc, char **argv){
 	const char msg_title_in[30] = "Mensagem recebida do servidor";
 
 	/* Testar os argumentos de entrada */
-	// Luis: o nome do programa conta sempre como argumento
 	if (argc != 2 || argv == NULL || argv[1] == NULL) { 
 		printf("Erro de argumentos.\n");
 		printf("Exemplo de uso: /table_client 10.101.148.144:54321\n");
 		return ERROR; 
 	}
 
-	/* Usar r_table_bind para ligar-se a uma tablea remota */
+	/* Usar r_table_bind para ligar-se a uma tabela remota */
 	// Passa ip:porto
 	table = rtable_bind(argv[1]);
+
+	if (table == NULL) {
+		printf("Connection Refused.\n");
+		printf("Trying a new connection\n");
+		sleep(3);
+		table = rtable_bind(argv[1]);
+		if (table == NULL) {
+			printf("Connection Refused.\n");
+			return ERROR;
+		}
+		
+	}
 
 	/* Fazer ciclo até que o utilizador resolva fazer "quit" */
 	stop = 0;
