@@ -248,7 +248,7 @@ int main(int argc, char **argv){
 			case BADKEY :		
 				printf("badkey %i\n", BADKEY);			
 				// Comando inválido ok
-				printErrors(NO_COMMAND);
+				printErrors(SEM_ARG);
 				print = 0;
 				break;
 
@@ -256,7 +256,7 @@ int main(int argc, char **argv){
 			case PUT :
 				printf("put %i\n", PUT);	
 				// Verifica possiveis erros
-				if (arguments == NULL) {
+				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
 					printErrors(PUT_NO_ARGS);
 					print = 0;
@@ -287,9 +287,9 @@ int main(int argc, char **argv){
 			case GET :
 				printf("get %i\n", GET);	
 				// Argumento do get
-				if (arguments == NULL) {
+				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro ok
-					printErrors(NO_COMMAND);
+					printErrors(GET_NO_ARG);
 					print = 0;
 					break;
 				}
@@ -313,7 +313,7 @@ int main(int argc, char **argv){
 			
 			case UPDATE :
 				printf("update %i\n", UPDATE);	
-				if (arguments == NULL) {
+				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
 					// Possivel mensagem de erro
 					printErrors(UPDATE_NO_ARGS);
 					print = 0;
@@ -343,7 +343,7 @@ int main(int argc, char **argv){
 			case DEL : 		
 				printf("del %i\n", DEL);	
 				// Verifica argumentos
-				if (arguments == NULL) {
+				if (arguments == NULL || arguments[0] == NULL) {
 					// Possivel mensagem de erro
 					printErrors(DEL_NO_ARG);
 					print = 0;
@@ -412,10 +412,13 @@ int main(int argc, char **argv){
 			if (print == 1)
 				print_msg(msg, msg_title_in);
 			// Liberta memória dos argumentos
-			table_free_keys(arguments);
+			rtable_free_keys(arguments);
 			// Liberta dados da msg
 			free_message(msg);
 	}
 	// Fim do ciclo...
-	return OK;
+	if (sigla == QUIT)
+		return result;
+	else
+		return OK;
 }
