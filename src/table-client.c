@@ -23,7 +23,7 @@
 #include "../include/message-private.h"
 #include "../include/client_stub-private.h"
 #include "../include/codes.h"
-s
+
 
 const char space[2] = " ";
 const char all_keys[2] = "!";

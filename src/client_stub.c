@@ -81,7 +81,7 @@ int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	}
 	// Mensagem de pedido já não é necessária
-	free_message(msg_pedido);
+	//free_message(msg_pedido);
 	return msg_resposta->content.result;
 }
 
@@ -112,7 +112,7 @@ int rtable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 		return ERROR;
 	} 
 	// Mensagem de pedido já não é necessária
-	free_message(msg_pedido);
+	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
 }
 
@@ -150,7 +150,7 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	}
 	printf("get3\n");
 	// Mensagem de pedido já não é necessária
-	free(msg_pedido);
+	//free(msg_pedido);
 	return msg_resposta->content.data;
 }
 
@@ -182,7 +182,7 @@ int rtable_del(struct rtable_t *table, char *key){
 		return ERROR;
 	} 
 	// Mensagem de pedido já não é necessária
-	free_message(msg_pedido);
+	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
 
 }
@@ -212,7 +212,7 @@ int rtable_size(struct rtable_t *rtable){
 		return ERROR;
 	} 
 	// Mensagem de pedido já não é necessária
-	free_message(msg_pedido);
+	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
 }
 
