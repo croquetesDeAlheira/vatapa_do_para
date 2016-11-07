@@ -1,4 +1,4 @@
-/*
+	/*
 *		Grupo 12
 * @author Daniel Santos 44887
 * @author Luis Barros  47082
@@ -13,18 +13,26 @@
 */
 #include <error.h>
 #include <errno.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
 
 #include "../include/inet.h"
 #include "../include/table-private.h"
 #include "../include/message-private.h"
+#include "../include/table_skel.h"
 
 #define ERROR -1
 #define OK 0
+#define TRUE 1 // boolean true
+#define FALSE 0 // boolean false
+#define NCLIENTS 4 // Número de sockets (uma para listening)
+#define TIMEOUT 1000 // em milisegundos
 
 /* Função para preparar uma socket de receção de pedidos de ligação.
 */
 int make_server_socket(short port){
   int socket_fd;
+  int rc, on = 1;
   struct sockaddr_in server;
 
   if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
@@ -32,9 +40,19 @@ int make_server_socket(short port){
     return -1;
   }
 
+  //make it reusable
+  rc = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+  if(rc < 0 ){
+  	perror("erro no setsockopt");
+  	close(socket_fd);
+  	return ERROR;
+  }
+
   server.sin_family = AF_INET;
   server.sin_port = htons(port);  
   server.sin_addr.s_addr = htonl(INADDR_ANY);
+
+
 
   if (bind(socket_fd, (struct sockaddr *) &server, sizeof(server)) < 0){
       perror("Erro ao fazer bind");
@@ -42,6 +60,7 @@ int make_server_socket(short port){
       return -1;
   }
 
+  //o segundo argumento talvez nao deva ser 0, para poder aceitar varios FD's
   if (listen(socket_fd, 0) < 0){
       perror("Erro ao executar listen");
       close(socket_fd);
@@ -75,6 +94,10 @@ int read_all(int sock, char *buf, int len){
 	int bufsize = len;
 	while(len > 0){
 		int res = read(sock, buf, len);
+		if(res == 0){
+			//client disconnected...
+			return ERROR;
+		}
 		if(res < 0){
 			if(errno == EINTR) continue;
 			perror("read failed:");
@@ -87,93 +110,6 @@ int read_all(int sock, char *buf, int len){
 }
 
 
-/* Função que recebe uma tabela e uma mensagem de pedido e:
-	- aplica a operação na mensagem de pedido na tabela;
-	- devolve uma mensagem de resposta com o resultado.
-*/
-struct message_t *process_message(struct message_t *msg_pedido, struct table_t *tabela){
-	//mensagem para devolver a resposta
-	struct message_t *msg_resposta = (struct message_t*)malloc(sizeof(struct message_t));
-	
-	if(msg_resposta == NULL){
-		return NULL;
-	}
-	/* Verificar parâmetros de entrada */
-	if(msg_pedido == NULL || tabela == NULL){
-		return NULL;
-	}
-	
-	/* Verificar opcode e c_type na mensagem de pedido */
-	short opcode = msg_pedido->opcode;
-	short c_type =msg_pedido->c_type;	
-	char *all = "!";
-	// Mensagem de uma chave que nao existe
-	char* n_existe = "Nao existe";
-	struct data_t *dataRet = data_create2(strlen(n_existe) + 1, n_existe);
-	/* Aplicar operação na tabela */
-	// opcode de resposta tem que ser opcode + 1
-	char** all_keys;
-	char* msg_chaves_vazias = "Nao existem chaves";
-	char* msg_erro = "Erro... Volte a tentar!";
-	switch(opcode){
-		case OC_SIZE:
-			msg_resposta->opcode = OC_SIZE_R;
-			msg_resposta->c_type = CT_RESULT;
-			msg_resposta->content.result = table_size(tabela);
-			break;
-		case OC_DEL:
-			msg_resposta->opcode = OC_DEL_R;
-			msg_resposta->c_type = CT_RESULT;
-			msg_resposta->content.result = table_del(tabela, msg_pedido->content.key);
-			break;
-		case OC_UPDATE:
-			msg_resposta->opcode = OC_UPDATE_R;
-			msg_resposta->c_type = CT_RESULT;
-			msg_resposta->content.result = table_update(tabela, msg_pedido->content.entry->key, msg_pedido->content.entry->value);
-			break;
-		case OC_GET:
-			// c_type CT_VALUE se a chave não existe
-			// c_type CT_KEYS
-			// c_type se for ! table_get_keys
-			// c_type se for key table_get
-			printf("key %s\n", msg_resposta->content.key);
-			msg_resposta->opcode = OC_GET_R;
-			if(strcmp(msg_pedido->content.key,all) == 0){
-				// Get de todas as chaves
-				msg_resposta->c_type = CT_KEYS;
-				all_keys = table_get_keys(tabela);
-				if (*all_keys == NULL) {
-					// Será erro ou tabela vazia
-					if (table_size(tabela) == 0){
-						*all_keys = msg_chaves_vazias;
-					}else{
-						*all_keys = msg_erro;
-					}
-				}
-				msg_resposta->content.keys = all_keys;
-			}else if(table_get(tabela, msg_pedido->content.key) == NULL){
-				//struct data_t *dataRet = data_create(0);
-				msg_resposta->c_type = CT_VALUE;
-				msg_resposta->content.data = dataRet;
-			}else{
-				msg_resposta->c_type = CT_VALUE;
-				msg_resposta->content.data = table_get(tabela, msg_pedido->content.key);
-			}
-			break;			
-		case OC_PUT:
-			msg_resposta->opcode = OC_PUT_R;
-			msg_resposta->c_type = CT_RESULT;
-			msg_resposta->content.result = table_put(tabela, msg_pedido->content.entry->key, msg_pedido->content.entry->value);
-			break;
-		
-		default:	
-			printf("opcode nao e´ valido, opcode = %i\n", opcode);
-	}
-	/* Preparar mensagem de resposta */
-	//printf("opcode = %i, c_type = %i\n", msg_resposta->opcode, msg_resposta->c_type);	
-	return msg_resposta;
-}
-
 
 /* Função "inversa" da função network_send_receive usada no table-client.
    Neste caso a função implementa um ciclo receive/send:
@@ -182,20 +118,19 @@ struct message_t *process_message(struct message_t *msg_pedido, struct table_t *
 	Aplica o pedido na tabela;
 	Envia a resposta.
 */
-int network_receive_send(int sockfd, struct table_t *table){
-
+int network_receive_send(int sockfd){
 	char *message_resposta, *message_pedido;
 	int msg_length;
 	int message_size, msg_size, result;
 	struct message_t *msg_pedido, *msg_resposta;
 
-	/* Verificar parâmetros de entrada */
-	if(table == NULL){ return ERROR;}
 	/* Com a função read_all, receber num inteiro o tamanho da 
 	   mensagem de pedido que será recebida de seguida.*/
 	result = read_all(sockfd, (char *) &msg_size, _INT);
 	/* Verificar se a receção teve sucesso */
-	if(result != _INT){return ERROR;}
+	if(result != _INT || result == ERROR){return ERROR;}
+
+
 
 	/* Alocar memória para receber o número de bytes da
 	   mensagem de pedido. */
@@ -214,7 +149,7 @@ int network_receive_send(int sockfd, struct table_t *table){
 	if(msg_pedido == NULL){return ERROR;}
 
 	/* Processar a mensagem */
-	msg_resposta = process_message(msg_pedido, table);
+	msg_resposta = invoke(msg_pedido);
 
 	/* Serializar a mensagem recebida */
 	message_size = message_to_buffer(msg_resposta, &message_resposta);
@@ -245,38 +180,156 @@ int network_receive_send(int sockfd, struct table_t *table){
 
 
 int main(int argc, char **argv){
-	int listening_socket, connsock, result;
-	int client_on = 1;
+	//remover nao usados depois...
+	int listening_socket;
+	int connsock;
+	int result;
+	int client_on = TRUE;
+	int server_on = TRUE;
+	struct pollfd socketsPoll[NCLIENTS];
 	struct sockaddr_in client;
 	socklen_t size_client;
-	struct table_t *table;
-
+	int checkPoll;
+	int numFDs = 1;
+	int activeFDs = 0;
+	int close_conn;
+	int compress_list;
+	int i;
+	
 	// Nota: 3 argumentos. O nome do programa conta!
 	if (argc != 3){
-	printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
-	printf("Exemplo de uso: ./table-server 54321 10\n");
-	return -1;
+		printf("Uso: ./server <porta TCP> <dimensão da tabela>\n");
+		printf("Exemplo de uso: ./table-server 54321 10\n");
+		return ERROR;
 	}
 
-	if ((listening_socket = make_server_socket(atoi(argv[1]))) < 0) return -1;
+	//Codigo de acordo com as normas da IBM
+	/*make a reusable listening socket*/
+	listening_socket = make_server_socket(atoi(argv[1]));
+	//check if done right
+	if(listening_socket < 0){return -1;}
+	printf("%d\n", listening_socket );
 
-	if ((table = table_create(atoi(argv[2]))) == NULL){
-	result = close(listening_socket);
-	return -1;
+	/* initialize table */
+	if(table_skel_init(atoi(argv[2])) == ERROR){ 
+		close(listening_socket); 
+		return ERROR;
 	}
-	while ((connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client)) != -1) {
-		printf(" * Client is connected!\n");
 
-		while (client_on){
 
-			/* Fazer ciclo de pedido e resposta */
-			if(network_receive_send(connsock, table) < 0){
-				/* Ciclo feito com sucesso ? Houve erro?
-			   	Cliente desligou? */
-				printf("maybe Enviar opcode erro\n");
-        			client_on = 0;
-        			close(connsock);
-			}	
+
+	//inicializa todos os clientes com 0
+	memset(socketsPoll, 0 , sizeof(socketsPoll));
+	//o primeiro elem deve ser o listening
+	socketsPoll[0].fd = listening_socket;
+	socketsPoll[0].events = POLLIN;
+
+	/* ciclo para receber os clients conectados */
+
+	printf("a espera de clientes...\n");
+	//call poll and check
+	while(server_on){ //while no cntrl c
+		while((checkPoll = poll(socketsPoll, numFDs, TIMEOUT)) >= 0){
+
+			//verifica se nao houve evento em nenhum socket
+			if(checkPoll == 0){
+				perror("timeout expired on poll()");
+				continue;
+			}else {
+
+				/* então existe pelo menos 1 poll active, QUAL???? loops ;) */
+				for(i = 0; i < numFDs; i++){
+					//procura...0 nao houve return events
+					if(socketsPoll[i].revents == 0){continue;}
+
+					//se houve temos de ver se foi POLLIN
+					if(socketsPoll[i].revents != POLLIN){
+     					printf("  Error! revents = %d\n", socketsPoll[i].revents);
+       					break;
+     				}
+
+
+     				//se for POLLIN pode ser no listening_socket ou noutro qualquer...
+     				if(socketsPoll[i].fd == listening_socket){
+     					//quer dizer que temos de aceitar todas as ligações com a nossa socket listening
+     					connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
+     					if (connsock < 0){
+           					if (errno != EWOULDBLOCK){
+              					perror("  accept() failed");
+           			 		}
+           			 		break;
+          				}
+          				socketsPoll[numFDs].fd = connsock;
+          				socketsPoll[numFDs].events = POLLIN;
+          				numFDs++;
+     			
+     					//fim do if do listening
+     				}else{/* não é o listening....então deve ser outro...*/
+     					close_conn = FALSE;
+     					client_on = TRUE;
+     					printf("cliente conectado\n");
+     					//while(client_on){
+     						//receive data
+     					int result = network_receive_send(socketsPoll[i].fd);
+     					if(result < 0){ 
+     						//ou mal recebida ou o cliente desconectou
+     						// -> close connection
+     						printf("ocorreu um error ou cliente desconectou\n");
+     						 //fecha o fileDescriptor
+     						close(socketsPoll[i].fd);
+     						//set fd -1
+          					socketsPoll[i].fd = -1;
+          					compress_list = TRUE;
+							int j;
+							if (compress_list){
+    							compress_list = FALSE;
+    							for (i = 0; i < numFDs; i++){
+    								if (socketsPoll[i].fd == -1){
+    		    						for(j = i; j < numFDs; j++){
+    		        						socketsPoll[j].fd = socketsPoll[j+1].fd;
+    		      						}
+    		    						numFDs--;
+    		    					}
+    							}
+    						}
+     					}	
+	   				}//fim da ligacao cliente-servidor
+     			}//fim do else
+			}//fim do for numFDs
 		}
-	}
+			//se a lista tiver fragmentada, devemos comprimir 
+	}//fim do for polls
+
+    //close dos sockets
+    for (i = 0; i < numFDs; i++){
+    	if(socketsPoll[i].fd >= 0){
+     		close(socketsPoll[i].fd);
+     	}
+ 	}
+
+
 }
+
+
+	/*
+	while(1){
+		printf("waiting client\n");
+		connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
+		if(connsock < 0){
+			printf("error\n");
+		}
+		printf(" * Client is connected!\n");
+		while (client_on){
+			/* Fazer ciclo de pedido e resposta 
+			if(network_receive_send(connsock) < 0){
+				printf("maybe Enviar opcode erro\n");
+        		client_on = 0;
+			}else{
+				printf("cliente received everything\n");
+			}
+
+		}
+		printf("client offline\n");
+		close(connsock);
+	}
+	*/
