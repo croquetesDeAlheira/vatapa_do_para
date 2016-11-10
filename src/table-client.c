@@ -128,7 +128,6 @@ void print_msg(struct message_t *msg, const char* title) {
 }
 
 void printErrors(int code) {
-	printf("code %i\n", code);	
 	switch (code) {
 		case SEM_ARG :
 			printf("Comando nao conhecido, por favor tente de novo\n");

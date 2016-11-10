@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #include "../include/inet.h"
 #include "../include/table-private.h"
@@ -26,7 +27,31 @@
 #define TRUE 1 // boolean true
 #define FALSE 0 // boolean false
 #define NCLIENTS 4 // Número de sockets (uma para listening)
-#define TIMEOUT 1000 // em milisegundos
+#define TIMEOUT -1 // em milisegundos
+
+//variaveis globais
+int i;
+int numFDs = 1;
+struct pollfd socketsPoll[NCLIENTS];
+
+
+void finishServer(int signal){
+    //close dos sockets
+    for (i = 0; i < numFDs; i++){
+    	if(socketsPoll[i].fd >= 0){
+     		close(socketsPoll[i].fd);
+     	}
+ 	}
+	table_skel_destroy();
+	printf("\n :::: -> SERVIDOR ENCERRADO <- :::: \n");
+	exit(0);
+}
+
+
+
+
+
+
 
 /* Função para preparar uma socket de receção de pedidos de ligação.
 */
@@ -186,15 +211,16 @@ int main(int argc, char **argv){
 	int result;
 	int client_on = TRUE;
 	int server_on = TRUE;
-	struct pollfd socketsPoll[NCLIENTS];
 	struct sockaddr_in client;
 	socklen_t size_client;
 	int checkPoll;
-	int numFDs = 1;
+	
 	int activeFDs = 0;
 	int close_conn;
 	int compress_list;
-	int i;
+
+	// caso seja pressionado o ctrl+c
+	 signal(SIGINT, finishServer);
 	
 	// Nota: 3 argumentos. O nome do programa conta!
 	if (argc != 3){
@@ -208,7 +234,7 @@ int main(int argc, char **argv){
 	listening_socket = make_server_socket(atoi(argv[1]));
 	//check if done right
 	if(listening_socket < 0){return -1;}
-	printf("%d\n", listening_socket );
+	
 
 	/* initialize table */
 	if(table_skel_init(atoi(argv[2])) == ERROR){ 
@@ -252,6 +278,7 @@ int main(int argc, char **argv){
      				//se for POLLIN pode ser no listening_socket ou noutro qualquer...
      				if(socketsPoll[i].fd == listening_socket){
      					//quer dizer que temos de aceitar todas as ligações com a nossa socket listening
+						size_client = sizeof(struct sockaddr_in);
      					connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
      					if (connsock < 0){
            					if (errno != EWOULDBLOCK){
@@ -300,12 +327,7 @@ int main(int argc, char **argv){
 			//se a lista tiver fragmentada, devemos comprimir 
 	}//fim do for polls
 
-    //close dos sockets
-    for (i = 0; i < numFDs; i++){
-    	if(socketsPoll[i].fd >= 0){
-     		close(socketsPoll[i].fd);
-     	}
- 	}
+
 
 
 }
