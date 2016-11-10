@@ -289,19 +289,20 @@ int main(int argc, char **argv){
           				socketsPoll[numFDs].fd = connsock;
           				socketsPoll[numFDs].events = POLLIN;
           				numFDs++;
+						printf("cliente conectado\n");
      			
      					//fim do if do listening
      				}else{/* não é o listening....então deve ser outro...*/
      					close_conn = FALSE;
      					client_on = TRUE;
-     					printf("cliente conectado\n");
+     					printf("cliente fez pedido\n");
      					//while(client_on){
      						//receive data
      					int result = network_receive_send(socketsPoll[i].fd);
      					if(result < 0){ 
      						//ou mal recebida ou o cliente desconectou
      						// -> close connection
-     						printf("ocorreu um error ou cliente desconectou\n");
+     						printf("cliente desconectou\n");
      						 //fecha o fileDescriptor
      						close(socketsPoll[i].fd);
      						//set fd -1
