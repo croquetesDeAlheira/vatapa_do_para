@@ -29,8 +29,8 @@
 const char space[2] = " ";
 const char all_keys[2] = "!";
 
-// Estrutura para poder associar os comandos
-// aos comandos
+// Estrutura para poder associar os comandos recebidos
+// aos comandos de manipulacao de dados na tabela
 static struct commands_t lookUpTabble[] = {
 	{"put", PUT}, 
 	{"get", GET}, 
@@ -40,11 +40,11 @@ static struct commands_t lookUpTabble[] = {
 	{"quit", QUIT}
 };
 
-// Numero de comandos definidos de maneira automatica
+// Numero de comandos definidos
 #define NKEYS (sizeof(lookUpTabble) / sizeof(struct commands_t))
 
-// Funcao que me dá o valor de um comando
-// correspondente a uma string para usar no switch
+// Funcao que associa um comando recebido
+// a um comando de manipulacao de tabela
 int keyfromstring(char *key) {
 	int i;
 	// Estrutura definida em network_client-private.h
@@ -58,7 +58,7 @@ int keyfromstring(char *key) {
 }
 
 // Devolve um apontador de apontadores
-// contendo o resto dos tokens
+// contendo o resto dos tokens de uma string
 char ** getTokens (char* token) {
 	char **p, **result;
 	int i, n;
@@ -79,7 +79,7 @@ char ** getTokens (char* token) {
 	// Reserva memormia certa
 	result = (char**)calloc((n + 1), sizeof(char*));
 
-	//Copiar a memoria certa
+	// Copiar a memoria certa
 	for(i = 0; i < n; i++) {
 		result[i] = strdup(p[i]);
 		free(p[i]);
@@ -93,13 +93,11 @@ char ** getTokens (char* token) {
 	return result;
 }
 
-// Talvez tenha de sr definido
-// Função que imprime uma mensagem 
-void print_msg(struct message_t *msg, const char* title) {
+
+// Função que imprime uma mensagem para o cliente
+void print_msg(struct message_t *msg) {
 	int i;
-	printf("%s\n", title);
-	//printf("opcode = %i\n", msg->opcode);
-	printf("opcode: %d, c_type: %d\n", msg->opcode, msg->c_type);
+	//printf("opcode: %d, c_type: %d\n", msg->opcode, msg->c_type);
 	switch(msg->c_type) {
 		case CT_ENTRY:{
 			printf("key: %s\n", msg->content.entry->key);
@@ -127,6 +125,8 @@ void print_msg(struct message_t *msg, const char* title) {
 	printf("-------------------\n");
 }
 
+// Funcao que imprime avisos
+// ao cliente quando os comandos nao sao reconhecidos
 void printErrors(int code) {
 	switch (code) {
 		case SEM_ARG :
@@ -191,16 +191,12 @@ int main(int argc, char **argv){
 	struct data_t *data;
 	struct message_t *msg;
 
-
-	//const char quit[5] = "quit";
 	const char ip_port_seperator[2] = ":";
 	const char get_all_keys[2] = "!";
-	const char msg_title_out[31] = "Mensagem enviada para servidor";
-	const char msg_title_in[30] = "Mensagem recebida do servidor";
 
 	/* Testar os argumentos de entrada */
 	if (argc != 2 || argv == NULL || argv[1] == NULL) { 
-		printf("Erro de argumentos.\n");
+		perror("Erro de argumentos.\n");
 		printf("Exemplo de uso: /table_client 10.101.148.144:54321\n");
 		return ERROR; 
 	}
@@ -210,20 +206,15 @@ int main(int argc, char **argv){
 	table = rtable_bind(argv[1]);
 
 	if (table == NULL) {
-		printf("Connection Refused.\n");
-		printf("Trying a new connection\n");
-		sleep(3);
-		table = rtable_bind(argv[1]);
-		if (table == NULL) {
-			printf("Connection Refused.\n");
-			return ERROR;
-		}
-		
+		perror("Tabela indisponivel, Por favor tente mais tarde.\n");
+		return ERROR;
 	}
 
 	/* Fazer ciclo até que o utilizador resolva fazer "quit" */
 	stop = 0;
  	while (stop == 0) { 
+ 		
+
  		// Parte do principio que é para imprimir mensagem
  		print = 1;
 		printf(">>> "); // Mostrar a prompt para receber comando
@@ -240,21 +231,20 @@ int main(int argc, char **argv){
 		//Confirma se tem comando
 		if (token == NULL) {
 			printErrors(NO_COMMAND);
-			// Duvida!?
 			continue;
 		}
-		// Sigla do comando para poder correr o switch
+		// Sigla que faz a correspondencia
+		// com a operacao a realizar sobre a tabela
 		sigla = keyfromstring(token);
 		// Determina argumentos caso existam
 		arguments = getTokens(token);
-		// Cria a mensagem a encapsular os resultados
-		// obtidos do servidor
+		// Cria a mensagem para imprimir o resultado 
+		// sobre as operacoes a realizar sobre a tabela
 		msg = (struct message_t *)calloc(1,sizeof(struct message_t ));
 		// Faz o switch dos comandos
 		switch(sigla) {
 			
 			case BADKEY :				
-				// Comando inválido ok
 				printErrors(SEM_ARG);
 				print = 0;
 				break;
@@ -263,7 +253,6 @@ int main(int argc, char **argv){
 			case PUT :
 				// Verifica possiveis erros
 				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
-					// Possivel mensagem de erro
 					printErrors(PUT_NO_ARGS);
 					print = 0;
 					break;
@@ -274,7 +263,6 @@ int main(int argc, char **argv){
 				data = data_create2(size, arguments[1]);
 				// Verifica data
 				if (data == NULL) {
-					// Possivel mensagem de erro ok
 					printErrors(ERROR_SYS);
 					print = 0;
 					break;
@@ -284,7 +272,6 @@ int main(int argc, char **argv){
 				// Libertar memória
 				data_destroy(data);
 				// Cria a mensagem a imprimir
-				msg->opcode = OC_PUT + 1;
 				msg->c_type = CT_RESULT;
 				msg->content.result = result;
 				break;
@@ -293,7 +280,6 @@ int main(int argc, char **argv){
 			case GET :
 				// Argumento do get
 				if (arguments == NULL || arguments[0] == NULL) {
-					// Possivel mensagem de erro ok
 					printErrors(GET_NO_ARG);
 					print = 0;
 					break;
@@ -302,14 +288,12 @@ int main(int argc, char **argv){
 				if (strcmp(arguments[0], all_keys) == 0) {
 					keys = rtable_get_keys(table);
 					// Cria a mensagem a imprimir
-					msg->opcode = OC_GET + 1;
 					msg->c_type = CT_KEYS;
 					msg->content.keys = keys;
 				}
 				else {
 					data = rtable_get(table, arguments[0]);
 					// Cria a mensagem a imprimir
-					msg->opcode = OC_GET + 1;
 					msg->c_type = CT_VALUE;
 					msg->content.data = data;
 				}
@@ -318,7 +302,6 @@ int main(int argc, char **argv){
 			
 			case UPDATE :
 				if (arguments == NULL || arguments[0] == NULL || arguments[1] == NULL) {
-					// Possivel mensagem de erro
 					printErrors(UPDATE_NO_ARGS);
 					print = 0;
 					break;
@@ -329,7 +312,6 @@ int main(int argc, char **argv){
 				data = data_create2(size, arguments[1]);
 				// Verifica data
 				if (data == NULL) {
-					// Possivel mensagem de erro
 					printErrors(ERROR_SYS);
 					print = 0;
 					break;
@@ -337,7 +319,6 @@ int main(int argc, char **argv){
 				// Faz o pedido UPDATE
 				result = rtable_update(table, arguments[0], data);
 				// Cria a mensagem a imprimir
-				msg->opcode = OC_UPDATE + 1;
 				msg->c_type = CT_RESULT;
 				msg->content.result = result;
 				data_destroy(data);
@@ -347,7 +328,6 @@ int main(int argc, char **argv){
 			case DEL : 		
 				// Verifica argumentos
 				if (arguments == NULL || arguments[0] == NULL) {
-					// Possivel mensagem de erro
 					printErrors(DEL_NO_ARG);
 					print = 0;
 					break;
@@ -355,7 +335,6 @@ int main(int argc, char **argv){
 				// Faz o pedido DEL
 				result = rtable_del(table, arguments[0]);
 				// Cria a mensagem a imprimir
-				msg->opcode = OC_DEL + 1;
 				msg->c_type = CT_RESULT;
 				msg->content.result = result;
 				break;
@@ -364,14 +343,8 @@ int main(int argc, char **argv){
 			case SIZE :
 				// Se o comando é SIZE
 				// arguments deve vir igual a null
-				// Verifica, se for diferente de NULL
-				// Significa que escreveu size qualquer_coisa_mais
-				//////////////////////////////////////////
-				//// Antes estava arguments != NULL
-				// O problema está aqui
-				//////////////
+				// Se != NULL comando mal introduzido
 				if (arguments != NULL) {
-					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
 					print = 0;
 					break;
@@ -379,7 +352,6 @@ int main(int argc, char **argv){
 				// Faz pedido de SIZE
 				result = rtable_size(table);
 				// Cria mensagem e imprimir
-				msg->opcode = OC_SIZE + 1;
 				msg->c_type = CT_RESULT;
 				msg->content.result = result;
 				break;
@@ -387,11 +359,6 @@ int main(int argc, char **argv){
 			case QUIT :
 				// Nota: arguments deve vir a null 
 				// Caso contrário consideramos erro
-				// Exemplo: quit qualquer_coisa_mais
-				//////////////////////////////////////////
-				// Antes estava arguments != NULL
-				// O problema está aqui
-				////////////
 				if (arguments != NULL) {
 					// Possivel mensagem de erro
 					printErrors(NO_COMMAND);
@@ -405,9 +372,9 @@ int main(int argc, char **argv){
 				break;
 			}
 			// Fim do switch
-			// Envia a mensagem a ser imprimida
+			// Mensagem a imprimir
 			if (print == 1)
-				print_msg(msg, msg_title_in);
+				print_msg(msg);
 			// Liberta memória dos argumentos
 			rtable_free_keys(arguments);
 			// Liberta dados da msg
