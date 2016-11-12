@@ -250,3 +250,26 @@ char **rtable_get_keys(struct rtable_t *rtable){
 void rtable_free_keys(char **keys){
 	table_free_keys(keys);
 }
+
+
+
+/**
+*	:::: faz o pendido e se der erro tenta novamente depois do tempo de retry :::
+*
+*/
+struct message_t * network_with_retry(struct rtable_t *rtable, struct message_t *msg_pedido){
+	struct message_t *msg_resposta;
+	msg_resposta = network_send_receive(rtable->server, msg_pedido);
+	if(msg_resposta == NULL){
+		perror("Problema com a mensagem de resposta, tentar novamente..\n");
+		sleep(RETRY_TIME);
+		msg_resposta = network_send_receive(rtable->server, msg_pedido);
+		if(msg_resposta == NULL){
+			perror("sem resposta do servidor");
+		}
+	}
+
+	//retorna resposta seja null ou nao
+	return msg_resposta;
+
+}
