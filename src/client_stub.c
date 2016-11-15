@@ -21,6 +21,7 @@
 *
 */
 struct message_t *network_with_retry(struct server_t *server, struct message_t *msg_pedido){
+	printf("network with retry\n");
 	struct message_t *msg_resposta;
 	msg_resposta = network_send_receive(server, msg_pedido);
 	if(msg_resposta == NULL){
@@ -28,7 +29,7 @@ struct message_t *network_with_retry(struct server_t *server, struct message_t *
 		sleep(RETRY_TIME);
 		msg_resposta = network_send_receive(server, msg_pedido);
 		if(msg_resposta == NULL){
-			perror("sem resposta do servidor");
+			perror("sem resposta do servidor\n");
 		}
 	}
 
@@ -102,10 +103,10 @@ int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(rtable->server, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
-	//if(msg_resposta == NULL){
-	//	perror("Problema com a mensagem de resposta\n");
-	//	return ERROR;
-	//}
+	if(msg_resposta == NULL){
+		//perror("Problema com a mensagem de resposta\n");
+		return ERROR;
+	}
 	// Mensagem de pedido já não é necessária
 	//free_message(msg_pedido);
 	return msg_resposta->content.result;
@@ -134,10 +135,10 @@ int rtable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(rtable->server, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
-	//if(msg_resposta == NULL){
+	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
-	//	return ERROR;
-	//} 
+		return ERROR;
+	} 
 	// Mensagem de pedido já não é necessária
 	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
@@ -166,10 +167,10 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(table->server, msg_pedido);
 	//msg_resposta = network_send_receive(table->server, msg_pedido);
-	//if(msg_resposta == NULL){
+	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
-	//	return NULL;
-	//}
+		return NULL;
+	}
 	// Mensagem de pedido já não é necessária
 	//free(msg_pedido);
 	return msg_resposta->content.data;
@@ -199,10 +200,10 @@ int rtable_del(struct rtable_t *table, char *key){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(table->server, msg_pedido);
 	//msg_resposta = network_send_receive(table->server, msg_pedido);
-	//if(msg_resposta == NULL){
+	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
-	//	return ERROR;
-	//} 
+		return ERROR;
+	} 
 	// Mensagem de pedido já não é necessária
 	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
@@ -230,10 +231,10 @@ int rtable_size(struct rtable_t *rtable){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(rtable->server, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
-	//if(msg_resposta == NULL){
+	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
-	//	return ERROR;
-	//} 
+		return ERROR;
+	} 
 	// Mensagem de pedido já não é necessária
 	//free_message(msg_pedido);
 	return msg_resposta->content.result;	
@@ -264,10 +265,10 @@ char **rtable_get_keys(struct rtable_t *rtable){
 	// Receber a mensagem de resposta
 	msg_resposta = network_with_retry(rtable->server, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
-	//if(msg_resposta == NULL){
+	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
-	//	return NULL;
-	//} 
+		return NULL;
+	} 
 	// Mensagem de pedido já não é necessária
 	/////////////////////////////////////
 	// Este free message dá problemas... Tentar perceber porquê

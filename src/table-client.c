@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../include/network_client-private.h"
 #include "../include/message-private.h"
@@ -183,6 +184,7 @@ void printErrors(int code) {
  ************************************************************/
 int main(int argc, char **argv){
 
+	signal(SIGPIPE, SIG_IGN); //ignore sigpipe
 	struct rtable_t *table;
 	char input[81];
 	int stop, sigla, result, size, print;
