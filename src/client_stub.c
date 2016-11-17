@@ -20,13 +20,19 @@
 *	:::: faz o pendido e se der erro tenta novamente depois do tempo de retry :::
 *
 */
-struct message_t *network_with_retry(struct server_t *server, struct message_t *msg_pedido){
+struct message_t *network_with_retry(struct rtable_t *table, struct message_t *msg_pedido){
 	struct message_t *msg_resposta;
-	msg_resposta = network_send_receive(server, msg_pedido);
+	msg_resposta = network_send_receive(table->server, msg_pedido);
 	if(msg_resposta == NULL){
 		perror("Problema com a mensagem de resposta, tentar novamente..\n");
 		sleep(RETRY_TIME);
-		msg_resposta = network_send_receive(server, msg_pedido);
+
+		table->server = network_connect(table->ipAddr);
+		if(table->server == NULL){
+			perror("Problema na conecção\n");
+			return NULL;
+		}
+		msg_resposta = network_send_receive(table->server, msg_pedido);
 		if(msg_resposta == NULL){
 			perror("sem resposta do servidor\n");
 		}
@@ -62,6 +68,7 @@ struct rtable_t *rtable_bind(const char *address_port){
 		perror("Problema na conecção\n");
 		return NULL;
 	}
+	rtable->ipAddr = strdup(address_port);
 
 	return rtable;	
 }
@@ -100,7 +107,7 @@ int rtable_put(struct rtable_t *rtable, char *key, struct data_t *value){
 	msg_pedido->c_type = CT_ENTRY;
 	msg_pedido->content.entry = entry_create(key, value);
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(rtable->server, msg_pedido);
+	msg_resposta = network_with_retry(rtable, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
 		//perror("Problema com a mensagem de resposta\n");
@@ -132,7 +139,7 @@ int rtable_update(struct rtable_t *rtable, char *key, struct data_t *value){
 	msg_pedido->c_type = CT_ENTRY;
 	msg_pedido->content.entry = entry_create(key, value);
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(rtable->server, msg_pedido);
+	msg_resposta = network_with_retry(rtable, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
@@ -164,7 +171,7 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	msg_pedido->c_type = CT_KEY;
 	msg_pedido->content.key = key;
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(table->server, msg_pedido);
+	msg_resposta = network_with_retry(table, msg_pedido);
 	//msg_resposta = network_send_receive(table->server, msg_pedido);
 	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
@@ -197,7 +204,7 @@ int rtable_del(struct rtable_t *table, char *key){
 	msg_pedido->c_type = CT_KEY;
 	msg_pedido->content.key = key;
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(table->server, msg_pedido);
+	msg_resposta = network_with_retry(table, msg_pedido);
 	//msg_resposta = network_send_receive(table->server, msg_pedido);
 	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
@@ -228,7 +235,7 @@ int rtable_size(struct rtable_t *rtable){
 	msg_pedido->opcode = OC_SIZE;
 	msg_pedido->c_type = CT_RESULT;
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(rtable->server, msg_pedido);
+	msg_resposta = network_with_retry(rtable, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");
@@ -262,7 +269,7 @@ char **rtable_get_keys(struct rtable_t *rtable){
 	// Servidor vai verificar se content.key == !
 	msg_pedido->content.key = all;
 	// Receber a mensagem de resposta
-	msg_resposta = network_with_retry(rtable->server, msg_pedido);
+	msg_resposta = network_with_retry(rtable, msg_pedido);
 	//msg_resposta = network_send_receive(rtable->server, msg_pedido);
 	if(msg_resposta == NULL){
 	//	perror("Problema com a mensagem de resposta\n");

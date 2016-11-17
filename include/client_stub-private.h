@@ -2,7 +2,6 @@
 #define _CLIENT_STUB_PRIVATE_H
 
 #include "client_stub.h"
-#include "message.h"
 
 
 #define RETRY_TIME 2  // SECONDS
@@ -10,6 +9,7 @@
  */
 struct rtable_t{
 	struct server_t *server;
+	char *ipAddr;
 };
 
 
