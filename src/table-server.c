@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 
+
 #include "../include/inet.h"
 #include "../include/table-private.h"
 #include "../include/message-private.h"
@@ -176,8 +177,14 @@ int network_receive_send(int sockfd){
 	/* Processar a mensagem */
 	msg_resposta = invoke(msg_pedido);
 
+	if(msg_resposta == NULL){ // erro no invoke
+		return ERROR;
+	}
+
 	/* Serializar a mensagem recebida */
+	printf("serializar agora\n");
 	message_size = message_to_buffer(msg_resposta, &message_resposta);
+	printf("size = %d\n",  message_size);
 	/* Verificar se a serialização teve sucesso */
 	if(message_resposta <= OK){return ERROR;}
 	/* Enviar ao cliente o tamanho da mensagem que será enviada
@@ -333,26 +340,3 @@ int main(int argc, char **argv){
 
 }
 
-
-	/*
-	while(1){
-		printf("waiting client\n");
-		connsock = accept(listening_socket, (struct sockaddr *) &client, &size_client);
-		if(connsock < 0){
-			printf("error\n");
-		}
-		printf(" * Client is connected!\n");
-		while (client_on){
-			/* Fazer ciclo de pedido e resposta 
-			if(network_receive_send(connsock) < 0){
-				printf("maybe Enviar opcode erro\n");
-        		client_on = 0;
-			}else{
-				printf("cliente received everything\n");
-			}
-
-		}
-		printf("client offline\n");
-		close(connsock);
-	}
-	*/

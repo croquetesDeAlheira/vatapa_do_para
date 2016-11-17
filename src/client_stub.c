@@ -27,6 +27,9 @@ struct message_t *network_with_retry(struct rtable_t *table, struct message_t *m
 		perror("Problema com a mensagem de resposta, tentar novamente..\n");
 		sleep(RETRY_TIME);
 
+		if(network_close(table->server) < 0){
+			perror("Problema ao terminar a associação entre cliente e tabela remota\n");
+		}
 		table->server = network_connect(table->ipAddr);
 		if(table->server == NULL){
 			perror("Problema na conecção\n");
