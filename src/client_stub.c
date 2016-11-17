@@ -180,6 +180,11 @@ struct data_t *rtable_get(struct rtable_t *table, char *key){
 	//	perror("Problema com a mensagem de resposta\n");
 		return NULL;
 	}
+	//Se data vem a NULL é porque não existem keys
+	if(msg_resposta->content.data == NULL){
+		char *noKeys = "Não existem chaves";
+		return data_create2(strlen(noKeys), noKeys);
+	}
 	// Mensagem de pedido já não é necessária
 	//free(msg_pedido);
 	return msg_resposta->content.data;
