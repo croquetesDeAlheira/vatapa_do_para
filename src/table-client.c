@@ -269,7 +269,8 @@ int main(int argc, char **argv){
 					print = 0;
 					break;
 				}
-				// Faz o pedido PUT
+				// Faz o pedido PUT 
+				// O RETURN EM CASO DE ERRO É UM INTEIRO
 				result = rtable_put(table, arguments[0], data);
 				// Libertar memória
 				data_destroy(data);
@@ -289,6 +290,12 @@ int main(int argc, char **argv){
 				// Faz o pedido GET key ou GET all_keys
 				if (strcmp(arguments[0], all_keys) == 0) {
 					keys = rtable_get_keys(table);
+					if(keys == NULL){
+						//ocorreu um erro
+						printf("ocorreu um erro\n");
+						continue;
+
+					}
 					// Cria a mensagem a imprimir
 					msg->c_type = CT_KEYS;
 					msg->content.keys = keys;
@@ -296,8 +303,14 @@ int main(int argc, char **argv){
 				else {
 					data = rtable_get(table, arguments[0]);
 					// Cria a mensagem a imprimir
+					if(data == NULL){
+						//ocorreu um erro
+						printf("ocorreu um erro\n");
+						continue;
+					}
 					msg->c_type = CT_VALUE;
 					msg->content.data = data;
+					
 				}
 				break;
 
@@ -318,7 +331,8 @@ int main(int argc, char **argv){
 					print = 0;
 					break;
 				}
-				// Faz o pedido UPDATE
+				// Faz o pedido UPDATE 
+				//O RETURN EH UM INTEIRO...
 				result = rtable_update(table, arguments[0], data);
 				// Cria a mensagem a imprimir
 				msg->c_type = CT_RESULT;
@@ -335,6 +349,7 @@ int main(int argc, char **argv){
 					break;
 				}
 				// Faz o pedido DEL
+				//O RETURN EH UM INTEIRO...
 				result = rtable_del(table, arguments[0]);
 				// Cria a mensagem a imprimir
 				msg->c_type = CT_RESULT;
@@ -352,6 +367,7 @@ int main(int argc, char **argv){
 					break;
 				}
 				// Faz pedido de SIZE
+				//O RETURN EH UM INTEIRO...
 				result = rtable_size(table);
 				// Cria mensagem e imprimir
 				msg->c_type = CT_RESULT;

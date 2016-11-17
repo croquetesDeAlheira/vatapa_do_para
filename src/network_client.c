@@ -180,7 +180,7 @@ int write_all(int sock, char *buf, int len){
 	while(len > 0){
 		int res = write(sock, buf, len);
 		if(res < 0){
-		//	if(errno == EINTR) continue;
+			if(errno == EINTR) continue;
 			perror("write failed:");
 			return res;
 		}

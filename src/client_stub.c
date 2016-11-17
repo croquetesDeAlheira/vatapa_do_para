@@ -21,7 +21,6 @@
 *
 */
 struct message_t *network_with_retry(struct server_t *server, struct message_t *msg_pedido){
-	printf("network with retry\n");
 	struct message_t *msg_resposta;
 	msg_resposta = network_send_receive(server, msg_pedido);
 	if(msg_resposta == NULL){
