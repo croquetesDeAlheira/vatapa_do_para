@@ -7,7 +7,7 @@
 
 - Sequência de códigos
 	put a a
-	del a
+	del a  
 	put a a
 Erro: *** Error in `./table-client': malloc(): memory corruption (fast): 0x080c0069 ***
   
