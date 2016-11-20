@@ -9,7 +9,7 @@ BIN = bin
 INC = include
 OBJ = obj
 SRC = src
-CFLAGS = -I include
+CFLAGS = -I include  
 
 #OBJFILES_DATA = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_data.o
 #OBJFILES_ENTRY = $(OBJ)/data.o $(OBJ)/entry.o $(OBJ)/list.o $(OBJ)/test_entry.o
